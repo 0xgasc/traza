@@ -13,13 +13,16 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/packages/ui/node_modules ./packages/ui/node_modules
-COPY . .
+COPY packages/ui ./packages/ui
+COPY apps/web ./apps/web
+COPY tsconfig.base.json ./
 
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN pnpm -r build
+RUN pnpm --filter @traza/ui build && \
+    pnpm --filter @traza/web build
 
 FROM base AS runtime
 WORKDIR /app

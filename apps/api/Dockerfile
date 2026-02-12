@@ -15,8 +15,13 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=deps /app/packages/database/node_modules ./packages/database/node_modules
 COPY --from=deps /app/packages/crypto/node_modules ./packages/crypto/node_modules
-COPY . .
-RUN pnpm -r build
+COPY packages/database ./packages/database
+COPY packages/crypto ./packages/crypto
+COPY apps/api ./apps/api
+COPY tsconfig.base.json ./
+RUN pnpm --filter @traza/database build && \
+    pnpm --filter @traza/crypto build && \
+    pnpm --filter @traza/api build
 
 FROM base AS runtime
 WORKDIR /app
