@@ -19,6 +19,10 @@ COPY packages/database ./packages/database
 COPY packages/crypto ./packages/crypto
 COPY apps/api ./apps/api
 COPY tsconfig.base.json ./
+
+# Prisma generate needs a DATABASE_URL placeholder (doesn't connect, just generates client)
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+
 RUN pnpm --filter @traza/database build && \
     pnpm --filter @traza/crypto build && \
     pnpm --filter @traza/api build
@@ -36,6 +40,9 @@ COPY --from=build --chown=traza:nodejs /app/packages/database/prisma ./packages/
 COPY --from=build --chown=traza:nodejs /app/packages/crypto/dist ./packages/crypto/dist
 COPY --from=build --chown=traza:nodejs /app/packages/crypto/package.json ./packages/crypto/
 COPY --from=deps --chown=traza:nodejs /app/node_modules ./node_modules
+# Copy generated Prisma client from build stage (prisma generate output)
+COPY --from=build --chown=traza:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build --chown=traza:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 USER traza
