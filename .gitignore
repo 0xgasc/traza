@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.next/
+.turbo/
+out/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+
+# Logs
+*.log
+logs/
+
+# Prisma
+packages/database/prisma/migrations/**/migration_lock.toml
+
+# Docker
+postgres_data/
+
+# Hardhat
+packages/crypto/cache/
+packages/crypto/artifacts/
+packages/crypto/typechain-types/

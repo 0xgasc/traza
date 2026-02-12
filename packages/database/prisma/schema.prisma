@@ -1,0 +1,407 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Enums ---
+
+enum PlanTier {
+  FREE
+  STARTER
+  PRO
+  PROOF
+  ENTERPRISE
+}
+
+enum DocumentStatus {
+  DRAFT
+  PENDING
+  SIGNED
+  EXPIRED
+}
+
+enum SignatureType {
+  ELECTRONIC
+  PKI
+}
+
+enum SignatureStatus {
+  PENDING
+  SIGNED
+  DECLINED
+}
+
+enum FieldType {
+  SIGNATURE
+  DATE
+  TEXT
+  INITIALS
+  CHECKBOX
+}
+
+// New enums for multi-tenancy
+enum PlatformRole {
+  USER
+  SUPER_ADMIN
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_SETUP
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+// --- Models ---
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String
+  name         String
+  platformRole PlatformRole @default(USER)
+  // planTier kept temporarily for migration, will move to Organization
+  planTier     PlanTier     @default(FREE)
+  apiKeyHash   String?
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  lastLoginAt  DateTime?
+
+  // Existing relations
+  documents        Document[]     @relation("UserDocuments")
+  createdDocuments Document[]     @relation("CreatedDocuments")
+  webhooks         Webhook[]
+  refreshTokens    RefreshToken[]
+
+  // New org relations
+  memberships     OrgMembership[]
+  invitationsSent OrgInvitation[]
+
+  // Impersonation relations
+  impersonationsAsAdmin  ImpersonationSession[] @relation("ImpersonationAdmin")
+  impersonationsAsTarget ImpersonationSession[] @relation("ImpersonationTarget")
+
+  // Platform-level audit logs (actions not tied to org)
+  auditLogs AuditLog[] @relation("UserAuditLogs")
+
+  @@index([platformRole])
+}
+
+model Organization {
+  id     String    @id @default(uuid())
+  name   String
+  slug   String    @unique
+  status OrgStatus @default(ACTIVE)
+
+  // Plan & Billing (moved from User)
+  planTier             PlanTier @default(FREE)
+  stripeCustomerId     String?  @unique
+  stripeSubscriptionId String?
+  billingEmail         String?
+
+  // Branding
+  logoUrl      String?
+  primaryColor String? @default("#000000")
+
+  // Settings (flexible JSON storage)
+  settings Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  members     OrgMembership[]
+  documents   Document[]
+  invitations OrgInvitation[]
+  auditLogs   AuditLog[]      @relation("OrgAuditLogs")
+  webhooks    OrgWebhook[]
+
+  @@index([slug])
+  @@index([stripeCustomerId])
+}
+
+model OrgMembership {
+  id             String   @id @default(uuid())
+  userId         String
+  organizationId String
+  role           OrgRole  @default(MEMBER)
+  joinedAt       DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model OrgInvitation {
+  id             String           @id @default(uuid())
+  organizationId String
+  email          String
+  role           OrgRole          @default(MEMBER)
+  status         InvitationStatus @default(PENDING)
+  token          String           @unique
+  invitedById    String
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation(fields: [invitedById], references: [id])
+
+  @@index([email])
+  @@index([token])
+  @@index([organizationId])
+}
+
+model Document {
+  id                String         @id @default(uuid())
+  // Legacy field - will be removed after migration
+  ownerId           String?
+  // New org-based ownership
+  organizationId    String?
+  createdById       String?
+  title             String
+  fileUrl           String
+  fileHash          String
+  status            DocumentStatus @default(DRAFT)
+  expiresAt         DateTime?
+  pdfFileUrl        String?
+  pageCount         Int?
+  blockchainTxHash  String?
+  blockchainNetwork String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  // Relations - owner kept for backward compatibility during migration
+  owner        User?           @relation("UserDocuments", fields: [ownerId], references: [id], onDelete: Cascade)
+  organization Organization?   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?           @relation("CreatedDocuments", fields: [createdById], references: [id])
+  signatures   Signature[]
+  fields       DocumentField[]
+  auditLogs    AuditLog[]      @relation("DocumentAuditLogs")
+
+  @@index([fileHash])
+  @@index([ownerId, status])
+  @@index([organizationId, status])
+  @@index([createdById])
+}
+
+model Signature {
+  id              String          @id @default(uuid())
+  documentId      String
+  signerEmail     String
+  signerName      String
+  signedAt        DateTime?
+  ipAddress       String?
+  userAgent       String?
+  signatureType   SignatureType   @default(ELECTRONIC)
+  signatureData   String?
+  certificateData Json?
+  token           String          @unique
+  tokenExpiresAt  DateTime
+  status          SignatureStatus @default(PENDING)
+  order           Int             @default(1)
+  createdAt       DateTime        @default(now())
+
+  document    Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  fields      DocumentField[]
+  fieldValues FieldValue[]
+
+  @@index([documentId])
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  // Can be tied to document, org, or neither (platform-level)
+  documentId     String?
+  organizationId String?
+  actorId        String?
+  eventType      String
+  resourceType   String?
+  resourceId     String?
+  ipAddress      String?
+  userAgent      String?
+  metadata       Json     @default("{}")
+  timestamp      DateTime @default(now())
+
+  document     Document?     @relation("DocumentAuditLogs", fields: [documentId], references: [id], onDelete: Cascade)
+  organization Organization? @relation("OrgAuditLogs", fields: [organizationId], references: [id], onDelete: SetNull)
+  actor        User?         @relation("UserAuditLogs", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([documentId, timestamp])
+  @@index([organizationId, timestamp])
+  @@index([actorId, timestamp])
+  @@index([eventType])
+  @@index([resourceType, resourceId])
+}
+
+model Webhook {
+  id        String   @id @default(uuid())
+  userId    String
+  url       String
+  events    String[]
+  secret    String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+}
+
+// Organization-level webhooks (separate from user webhooks)
+model OrgWebhook {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  url            String
+  events         String[]
+  secret         String
+  isActive       Boolean  @default(true)
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries   OrgWebhookDelivery[]
+
+  @@index([organizationId])
+}
+
+model WebhookDelivery {
+  id           String    @id @default(uuid())
+  webhookId    String
+  eventType    String
+  payload      Json
+  responseCode Int?
+  responseBody String?
+  attempts     Int       @default(0)
+  nextRetryAt  DateTime?
+  deliveredAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+}
+
+model OrgWebhookDelivery {
+  id           String    @id @default(uuid())
+  webhookId    String
+  eventType    String
+  payload      Json
+  responseCode Int?
+  responseBody String?
+  attempts     Int       @default(0)
+  nextRetryAt  DateTime?
+  deliveredAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  webhook OrgWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model DocumentField {
+  id          String    @id @default(uuid())
+  documentId  String
+  signatureId String?
+  signerEmail String?
+  signerName  String?
+  fieldType   FieldType
+  page        Int
+  positionX   Decimal
+  positionY   Decimal
+  width       Decimal
+  height      Decimal
+  required    Boolean   @default(true)
+  label       String?
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  document   Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  signature  Signature?  @relation(fields: [signatureId], references: [id], onDelete: SetNull)
+  fieldValue FieldValue?
+
+  @@index([documentId])
+  @@index([signatureId])
+}
+
+model FieldValue {
+  id          String   @id @default(uuid())
+  fieldId     String   @unique
+  signatureId String
+  value       String
+  filledAt    DateTime @default(now())
+
+  field     DocumentField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  signature Signature     @relation(fields: [signatureId], references: [id], onDelete: Cascade)
+
+  @@index([signatureId])
+}
+
+model FeatureFlag {
+  id          String  @id @default(uuid())
+  key         String  @unique
+  name        String
+  description String?
+
+  enabled          Boolean    @default(false)
+  enabledForAll    Boolean    @default(false)
+  enabledOrgIds    String[]
+  enabledPlanTiers PlanTier[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+model ImpersonationSession {
+  id           String    @id @default(uuid())
+  adminUserId  String
+  targetUserId String
+  reason       String
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+
+  adminUser  User @relation("ImpersonationAdmin", fields: [adminUserId], references: [id])
+  targetUser User @relation("ImpersonationTarget", fields: [targetUserId], references: [id])
+
+  @@index([adminUserId])
+  @@index([targetUserId])
+}
