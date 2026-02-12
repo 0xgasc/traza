@@ -1,5 +1,5 @@
 FROM node:20-alpine AS base
-RUN npm install -g pnpm@9
+RUN apk add --no-cache openssl && npm install -g pnpm@9
 
 FROM base AS build
 WORKDIR /app
