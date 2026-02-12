@@ -39,10 +39,8 @@ COPY --from=build --chown=traza:nodejs /app/packages/database/package.json ./pac
 COPY --from=build --chown=traza:nodejs /app/packages/database/prisma ./packages/database/prisma
 COPY --from=build --chown=traza:nodejs /app/packages/crypto/dist ./packages/crypto/dist
 COPY --from=build --chown=traza:nodejs /app/packages/crypto/package.json ./packages/crypto/
-COPY --from=deps --chown=traza:nodejs /app/node_modules ./node_modules
-# Copy generated Prisma client from build stage (prisma generate output)
-COPY --from=build --chown=traza:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build --chown=traza:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
+# Copy node_modules from build stage (includes generated Prisma client)
+COPY --from=build --chown=traza:nodejs /app/node_modules ./node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 USER traza
