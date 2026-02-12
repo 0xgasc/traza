@@ -24,11 +24,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Build web (ui has no build script, Next.js handles transpilation via transpilePackages)
 RUN pnpm --filter @traza/web build
 
-# Debug: show standalone structure
-RUN echo "=== Standalone contents ===" && \
-    ls -la apps/web/.next/standalone/ 2>/dev/null || echo "No standalone dir!" && \
-    find apps/web/.next/standalone -name "server.js" -type f 2>/dev/null || echo "No server.js found"
-
 FROM base AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
