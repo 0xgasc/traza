@@ -1,6 +1,26 @@
 # Traza - E-Signature Platform
 
-Neo-brutalist e-signature platform with cryptographic verification and blockchain anchoring.
+Neo-brutalist e-signature platform with cryptographic verification, multi-tenancy, and blockchain anchoring.
+
+## Live Deployment
+
+| Service | URL |
+|---------|-----|
+| **API** | https://traza-api-production.up.railway.app |
+| **Web** | https://traza-web-production.up.railway.app |
+| **API Docs** | https://traza-api-production.up.railway.app/api/docs |
+| **Health** | https://traza-api-production.up.railway.app/health |
+| **Readiness** | https://traza-api-production.up.railway.app/ready |
+
+Hosted on [Railway](https://railway.com) with PostgreSQL.
+
+### Seeded Test Accounts
+
+| Role | Email | Password |
+|------|-------|----------|
+| Super Admin | `superadmin@traza.dev` | `SuperAdmin2024!` |
+| Admin | `admin@traza.dev` | `Traza2024!` |
+| Signer | `signer@traza.dev` | `Traza2024!` |
 
 ## Tech Stack
 
@@ -12,7 +32,7 @@ Neo-brutalist e-signature platform with cryptographic verification and blockchai
 - **Blockchain**: Polygon via ethers.js
 - **Email**: React Email + Resend
 - **Auth**: JWT (access + refresh tokens)
-- **PDF Rendering**: pdfjs-dist (client-side PDF viewer)
+- **PDF Rendering**: pdfjs-dist (client-side)
 - **Drag & Drop**: react-rnd (draggable/resizable field placement)
 
 ## Project Structure
@@ -25,15 +45,14 @@ firmas/
 │   │   │   ├── config/       # env, swagger, logger, sentry
 │   │   │   ├── controllers/  # route handlers
 │   │   │   ├── emails/       # React Email templates (4)
-│   │   │   ├── middleware/    # auth, error, rateLimit, security
-│   │   │   ├── routes/       # Express routers
+│   │   │   ├── middleware/    # auth, error, rateLimit, security, sanitize
+│   │   │   ├── routes/       # Express routers (7 route files)
 │   │   │   ├── services/     # business logic
 │   │   │   ├── utils/        # response helpers, file validation
 │   │   │   ├── app.ts        # Express app setup
 │   │   │   └── server.ts     # Entry point
-│   │   ├── __tests__/        # Jest tests (unit + integration)
-│   │   ├── Dockerfile        # Multi-stage production build
-│   │   └── .env              # Local env (already created)
+│   │   ├── __tests__/        # Jest tests
+│   │   └── Dockerfile        # Multi-stage production build
 │   └── web/              # Next.js frontend
 │       ├── src/app/          # App Router pages
 │       │   ├── page.tsx          # Landing page
@@ -44,52 +63,26 @@ firmas/
 │       │   │   │   └── [id]/
 │       │   │   │       ├── page.tsx      # Document detail
 │       │   │   │       └── prepare/
-│       │   │   │           └── page.tsx  # Field placement (prepare for signing)
+│       │   │   │           └── page.tsx  # Field placement
 │       │   │   ├── settings/
 │       │   │   └── webhooks/
-│       │   └── sign/[token]/     # Public signing page (PDF + fields)
+│       │   └── sign/[token]/     # Public signing page
 │       ├── src/components/
-│       │   ├── pdf/              # PDF viewer components
-│       │   │   ├── PdfViewer.tsx
-│       │   │   ├── PdfPage.tsx
-│       │   │   ├── PdfToolbar.tsx
-│       │   │   ├── usePdfDocument.ts
-│       │   │   └── types.ts
-│       │   ├── field-placement/  # Field placement (owner view)
-│       │   │   ├── FieldPlacer.tsx
-│       │   │   ├── FieldToolbar.tsx
-│       │   │   ├── PlacedField.tsx
-│       │   │   ├── useFieldPlacement.ts
-│       │   │   └── SignerColorMap.ts
-│       │   ├── signing/          # Signing experience (signer view)
-│       │   │   ├── SigningView.tsx
-│       │   │   ├── SignableField.tsx
-│       │   │   ├── SignatureFieldInput.tsx
-│       │   │   ├── TextFieldInput.tsx
-│       │   │   ├── DateFieldInput.tsx
-│       │   │   ├── CheckboxFieldInput.tsx
-│       │   │   ├── InitialsFieldInput.tsx
-│       │   │   └── useSigningState.ts
-│       │   └── ...               # Other components
+│       │   ├── pdf/              # PDF viewer
+│       │   ├── field-placement/  # Owner field placement
+│       │   ├── signing/          # Signer experience
+│       │   └── ...
 │       ├── src/lib/              # API client, auth helpers
-│       ├── playwright.config.ts  # E2E test config
-│       ├── e2e/                  # Playwright tests
-│       └── .env.local            # NEXT_PUBLIC_API_URL
+│       └── Dockerfile            # Multi-stage production build
 ├── packages/
 │   ├── database/         # Prisma schema + client
 │   │   └── prisma/
-│   │       ├── schema.prisma     # All models
-│   │       └── seed.ts           # Seed script
+│   │       ├── schema.prisma
+│   │       └── seed.ts
 │   ├── crypto/           # Hashing, proof bundles, blockchain client
-│   │   └── src/
-│   │       ├── hash.ts
-│   │       ├── proof.ts
-│   │       ├── blockchain.ts
-│   │       └── index.ts
-│   └── ui/               # Shared UI components (Button, Input, etc.)
-├── .github/workflows/ci.yml   # GitHub Actions CI
-├── .env.example                # Template for env vars
-├── claude_code_prompts.md      # Original 20 build prompts
+│   └── ui/               # Shared UI components
+├── .github/workflows/ci.yml
+├── .env.production.example
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json
 └── package.json
@@ -97,292 +90,232 @@ firmas/
 
 ## Database Models
 
-- **User** - accounts with bcrypt passwords
-- **Document** - uploaded files with SHA-256 hash, blockchain tx reference, pdfFileUrl, pageCount
+- **User** - accounts with bcrypt passwords, `platformRole` (USER / SUPER_ADMIN)
+- **Organization** - multi-tenant companies with plan tiers, branding, status
+- **OrgMembership** - user-to-org relationship with roles (OWNER / ADMIN / MEMBER / VIEWER)
+- **OrgInvitation** - pending member invitations with token-based acceptance
+- **Document** - uploaded files with SHA-256 hash, blockchain tx, scoped to organization
 - **Signature** - per-signer records with signing tokens, status tracking
 - **DocumentField** - field placements on PDF (signature, date, text, initials, checkbox)
 - **FieldValue** - values entered by signers for each field
-- **AuditLog** - every action logged (create, sign, anchor, etc.)
-- **Webhook** - user-configured webhook endpoints
-- **WebhookDelivery** - delivery attempts with retry tracking
+- **AuditLog** - every action logged (create, sign, anchor, impersonate, etc.)
+- **Webhook** / **WebhookDelivery** - user-configured endpoints with retry tracking
 - **RefreshToken** - JWT refresh token storage
-
-### Field Types (enum)
-- `SIGNATURE` - signature capture field
-- `DATE` - date picker field
-- `TEXT` - free text input
-- `INITIALS` - initials capture (smaller signature)
-- `CHECKBOX` - boolean checkbox
-
-## Prerequisites
-
-You need **PostgreSQL** running locally. Install via one of:
-
-### Option A: Homebrew (recommended for macOS)
-
-```bash
-# Install Homebrew if you don't have it
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install PostgreSQL
-brew install postgresql@16
-brew services start postgresql@16
-
-# Create database and user
-createuser -s traza
-createdb -O traza traza
-psql -d traza -c "ALTER USER traza PASSWORD 'traza';"
-```
-
-### Option B: Postgres.app
-
-Download from https://postgresapp.com/ — drag to Applications, open, click Initialize. Then:
-
-```bash
-/Applications/Postgres.app/Contents/Versions/latest/bin/createuser -s traza
-/Applications/Postgres.app/Contents/Versions/latest/bin/createdb -O traza traza
-/Applications/Postgres.app/Contents/Versions/latest/bin/psql -d traza -c "ALTER USER traza PASSWORD 'traza';"
-```
-
-### Option C: Cloud Postgres (no install)
-
-Use [Neon](https://neon.tech) (free tier) or [Supabase](https://supabase.com). Update `DATABASE_URL` in `apps/api/.env` with the connection string they provide.
+- **FeatureFlag** - platform feature toggles per plan tier
+- **ImpersonationSession** - admin impersonation audit trail
 
 ## Setup & Run
 
 ```bash
-# 1. Install dependencies (from project root)
+# 1. Install dependencies
 pnpm install
 
 # 2. Generate Prisma client
 pnpm --filter @traza/database db:generate
 
-# 3. Run database migrations (PostgreSQL must be running)
-cd packages/database
-npx prisma migrate dev --name init
-cd ../..
+# 3. Run database migrations
+cd packages/database && npx prisma migrate dev --name init && cd ../..
 
-# 4. (Optional) Seed the database
+# 4. (Optional) Seed test data
 pnpm --filter @traza/database db:seed
 
-# 5. Start API server (port 4000)
+# 5. Start API (port 4000)
 pnpm --filter api dev
 
-# 6. In another terminal — start web server (port 3000)
+# 6. Start Web (port 3000) — separate terminal
 pnpm --filter web dev
 ```
 
-## Verify It Works
+### Verify
 
-- **Landing page**: http://localhost:3000
-- **API health**: http://localhost:4000/health
-- **API docs (Swagger)**: http://localhost:4000/api/docs
-- **API spec (JSON)**: http://localhost:4000/api/docs.json
-
-## Environment Variables
-
-Already configured in `apps/api/.env`. Key ones:
-
-| Variable | Default | Notes |
-|----------|---------|-------|
-| `DATABASE_URL` | `postgresql://traza:traza@localhost:5432/traza` | Must match your Postgres setup |
-| `JWT_SECRET` | `dev-jwt-secret-change-in-production` | Change in production |
-| `PORT` | `4000` | API server port |
-| `APP_URL` | `http://localhost:3000` | Frontend URL |
-| `RESEND_API_KEY` | (empty) | Optional — emails log to console without it |
-| `SENTRY_DSN` | (empty) | Optional — Sentry disabled without it |
-| `POLYGON_RPC_URL` | Polygon Amoy testnet | For blockchain anchoring |
-| `POLYGON_PRIVATE_KEY` | (empty) | Optional — blockchain features disabled without it |
+- Landing page: http://localhost:3000
+- API health: http://localhost:4000/health
+- API docs (Swagger): http://localhost:4000/api/docs
 
 ## API Endpoints
 
-### Auth
-- `POST /api/auth/register` - Create account
-- `POST /api/auth/login` - Login (returns JWT)
-- `POST /api/auth/refresh` - Refresh access token
-- `POST /api/auth/logout` - Revoke refresh token
+### Auth (`/api/v1/auth`)
+- `POST /register` - Create account
+- `POST /login` - Login (returns JWT)
+- `POST /refresh` - Refresh access token
+- `POST /logout` - Revoke refresh token
 
-### Documents
-- `POST /api/documents` - Upload document (multipart, PDF/DOCX/TXT)
-- `GET /api/documents` - List user's documents (paginated)
-- `GET /api/documents/:id` - Get document details
-- `DELETE /api/documents/:id` - Delete document
-- `GET /api/documents/:id/download` - Download file
-- `POST /api/documents/:id/verify` - Verify document integrity
-- `POST /api/documents/:id/anchor` - Anchor to blockchain
-- `GET /api/documents/:id/proof` - Generate proof bundle
+### Documents (`/api/v1/documents`)
+- `POST /` - Upload document (multipart, PDF/DOCX/TXT)
+- `GET /` - List documents (paginated)
+- `GET /:id` - Get document details
+- `DELETE /:id` - Delete document
+- `GET /:id/download` - Download file
+- `GET /:id/verify` - Verify integrity (SHA-256 + blockchain)
+- `POST /:id/anchor` - Anchor to Polygon blockchain
+- `POST /:id/proof` - Generate cryptographic proof bundle
+- `GET /:id/fields` - Get placed fields
+- `PUT /:id/fields` - Save/update all fields
+- `GET /:id/pdf` - Stream PDF (authenticated)
 
-### Document Fields (PDF field placement)
-- `GET /api/v1/documents/:id/fields` - Get fields for document
-- `PUT /api/v1/documents/:id/fields` - Save/update all fields (full replace)
-- `GET /api/v1/documents/:id/pdf` - Stream PDF to owner (authenticated)
+### Signing (`/api/v1`)
+- `POST /documents/:id/send` - Send for signing
+- `GET /documents/:id/signatures` - List signatures
+- `GET /sign/:token` - Get signing context (public)
+- `GET /sign/:token/pdf` - Stream PDF to signer (public)
+- `GET /sign/:token/fields` - Get signer's assigned fields (public)
+- `POST /sign/:token` - Submit signature + field values (public)
+- `POST /sign/:token/decline` - Decline to sign (public)
 
-### Signatures
-- `POST /api/v1/documents/:id/send` - Send for signing (links fields to signers)
-- `GET /api/v1/documents/:id/signatures` - List signatures for document
-- `GET /api/v1/sign/:token` - Get signing context (public)
-- `GET /api/v1/sign/:token/pdf` - Stream PDF to signer (token-based)
-- `GET /api/v1/sign/:token/fields` - Get signer's assigned fields
-- `POST /api/v1/sign/:token` - Submit signature + field values (public)
-- `POST /api/v1/sign/:token/decline` - Decline to sign (public)
+### Organizations (`/api/v1/organizations`)
+- `GET /` - List user's organizations
+- `POST /` - Create organization
+- `GET /:orgId` - Get org details
+- `PATCH /:orgId` - Update org (ADMIN/OWNER)
+- `DELETE /:orgId` - Delete org (OWNER)
+- `POST /:orgId/leave` - Leave organization
+- `GET /:orgId/members` - List members
+- `PATCH /:orgId/members/:memberId` - Update member role
+- `DELETE /:orgId/members/:memberId` - Remove member
+- `GET /:orgId/invitations` - List pending invitations
+- `POST /:orgId/invitations` - Invite member
+- `DELETE /:orgId/invitations/:invitationId` - Revoke invitation
+- `POST /invitations/accept` - Accept invitation (token)
+- `POST /switch` - Switch active organization
 
-### Webhooks
-- `POST /api/webhooks` - Create webhook
-- `GET /api/webhooks` - List webhooks
-- `PUT /api/webhooks/:id` - Update webhook
-- `DELETE /api/webhooks/:id` - Delete webhook
-- `GET /api/webhooks/:id/deliveries` - View delivery history
+### Admin (`/api/v1/admin`) — Super Admin only
+- `GET /organizations` - List all orgs
+- `POST /organizations` - Create org with plan
+- `GET /organizations/:orgId` - Get org details
+- `PATCH /organizations/:orgId` - Update org
+- `POST /organizations/:orgId/suspend` - Suspend org
+- `DELETE /organizations/:orgId` - Delete org
+- `GET /users` - List all users
+- `GET /users/:userId` - Get user
+- `PATCH /users/:userId` - Update user / promote to admin
+- `POST /users/:userId/impersonate` - Start impersonation (requires reason)
+- `POST /impersonation/end` - End impersonation
+- `GET /feature-flags` - List flags
+- `POST /feature-flags` - Create flag
+- `PATCH /feature-flags/:flagId` - Update flag
+- `DELETE /feature-flags/:flagId` - Delete flag
+- `GET /audit-logs` - View audit logs
+- `GET /analytics` - Platform analytics
+
+### GDPR (`/api/v1/account`)
+- `GET /export` - Export all user data (JSON download)
+- `POST /delete` - Delete account and all associated data
+
+### Webhooks (`/api/v1/webhooks`)
+- `POST /` - Create webhook
+- `GET /` - List webhooks
+- `PUT /:id` - Update webhook
+- `DELETE /:id` - Delete webhook
+- `GET /:id/deliveries` - View delivery history
 
 ### Dashboard
-- `GET /api/dashboard/stats` - Dashboard statistics
+- `GET /api/v1/dashboard/stats` - Dashboard statistics
 
-## Testing
-
-```bash
-# Unit tests
-pnpm --filter api test:unit
-
-# Integration tests (needs running Postgres)
-pnpm --filter api test:integration
-
-# All tests with coverage
-pnpm --filter api test:coverage
-
-# E2E tests (needs both servers running)
-cd apps/web && npx playwright test
-```
-
-## Key Features Built
-
-1. JWT auth with refresh tokens and bcrypt
-2. Document upload with SHA-256 hashing and magic byte validation
-3. S3-compatible file storage
-4. Signature workflow (send, sign, decline, expire)
-5. Blockchain anchoring on Polygon
-6. Cryptographic proof bundle generation (HMAC-signed)
-7. Webhook system with HMAC signatures and retry
-8. React Email templates (signature request, completed, reminder, expiration)
-9. OpenAPI/Swagger documentation
-10. Rate limiting and security headers (Helmet CSP/HSTS)
-11. Security audit logging
-12. Winston file logging + Sentry error tracking
-13. Neo-brutalist landing page with pricing
-14. Dashboard, document management, and settings pages
-15. GitHub Actions CI pipeline
-16. Docker production build
-17. **PDF Viewer** - client-side PDF rendering with pdfjs-dist
-18. **Drag-and-drop field placement** - owner places signature/date/text/initials/checkbox fields on PDF pages
-19. **Percentage-based coordinates** - fields stored as % of page dimensions (zoom-independent)
-20. **Field-based signing experience** - signers fill their assigned fields on the actual PDF
-21. **Auto-save** - debounced 3-second auto-save while placing fields
-22. **Next-field navigation** - "Next Field" button guides signers through unfilled fields
-23. **Signer color-coding** - fields for different signers shown in different colors (amber, sky, emerald, rose, violet)
-
-## User Flow (PDF + Field Placement)
+## User Flow
 
 ```
 1. UPLOAD     → Owner uploads PDF document
 2. PREPARE    → Owner places fields on PDF pages (/documents/:id/prepare)
-               - Select signer from list
-               - Click to add fields (signature, date, text, initials, checkbox)
+               - Select signer, add fields (signature, date, text, initials, checkbox)
                - Drag to reposition, resize handles to adjust
-               - Auto-saves every 3 seconds after changes
+               - Auto-saves every 3 seconds
 3. SEND       → Owner sends for signing
-               - Fields are linked to signers by email
                - Signers receive email with unique signing link
 4. SIGN       → Signer opens link (/sign/:token)
-               - PDF renders with their assigned fields highlighted
-               - "Next Field" button guides through unfilled required fields
-               - Progress bar shows "X of Y fields completed"
-               - Submit button enabled when all required fields filled
-5. COMPLETE   → All signers done → document status becomes SIGNED
-               - Owner notified via email
-               - Optional: anchor to blockchain for tamper-proof proof
+               - PDF renders with assigned fields highlighted
+               - "Next Field" button guides through unfilled fields
+               - Progress bar shows completion
+5. COMPLETE   → All signers done → document SIGNED
+               - Optional: anchor to blockchain for tamper-proof record
 ```
 
-## Build Status
-
-- API: `tsc --noEmit` passes clean (zero errors)
-- Web: `tsc --noEmit` passes clean (zero errors)
-- All 20 build phases from `claude_code_prompts.md` are complete
-- PDF viewer + field placement feature (Phase 21) complete
-
-## Current Local Setup
-
-PostgreSQL is installed via **Postgres.app** at `/Applications/Postgres.app`. Data directory: `~/Library/Application Support/Postgres/var-17/`.
-
-### Starting PostgreSQL (if it's not running)
+## Docker
 
 ```bash
-PGBIN="/Applications/Postgres.app/Contents/Versions/latest/bin"
-PGDATA="$HOME/Library/Application Support/Postgres/var-17"
-"$PGBIN/pg_ctl" -D "$PGDATA" -l "$PGDATA/server.log" start
+# Build API
+docker build -f apps/api/Dockerfile -t traza-api .
+
+# Build Web (pass API URL as build arg for Next.js)
+docker build -f apps/web/Dockerfile \
+  --build-arg NEXT_PUBLIC_API_URL=https://traza-api-production.up.railway.app \
+  -t traza-web .
 ```
 
-### Stopping PostgreSQL
+### Docker notes
+- API Dockerfile installs `openssl` on Alpine for Prisma compatibility
+- Uses `pnpm prune --prod` to minimize image size
+- Prisma binary target: `linux-musl-openssl-3.0.x` (Alpine)
+- Web uses Next.js `standalone` output mode
+
+## Railway Deployment
 
 ```bash
-PGBIN="/Applications/Postgres.app/Contents/Versions/latest/bin"
-PGDATA="$HOME/Library/Application Support/Postgres/var-17"
-"$PGBIN/pg_ctl" -D "$PGDATA" stop
+# Deploy services
+railway up --service traza-api --detach
+railway up --service traza-web --detach
+
+# View logs
+railway logs --service traza-api
+railway logs --service traza-web
+
+# Run migrations (use public DB URL from Railway dashboard)
+DATABASE_URL="postgresql://..." npx prisma@5.22.0 migrate deploy \
+  --schema packages/database/prisma/schema.prisma
+
+# Seed production database
+DATABASE_URL="postgresql://..." npx tsx packages/database/prisma/seed.ts
 ```
 
-Database `traza` with user `traza` (password: `traza`) is already created.
-Prisma migrations have been applied.
+### Railway env vars
 
-### Quick Start (everything is set up, just run)
+**API:** `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `SIGNING_TOKEN_SECRET`, `PLATFORM_SECRET_KEY`, `APP_URL`, `NODE_ENV=production`
+
+**Web:** `NEXT_PUBLIC_API_URL` (set as both env var and build arg)
+
+## Environment Variables
+
+See `.env.production.example` for the full list.
+
+| Variable | Default | Notes |
+|----------|---------|-------|
+| `DATABASE_URL` | `postgresql://traza:traza@localhost:5432/traza` | PostgreSQL connection |
+| `JWT_SECRET` | dev placeholder | Change in production |
+| `PORT` | `4000` | API server port |
+| `APP_URL` | `http://localhost:3000` | Frontend URL (CORS) |
+| `RESEND_API_KEY` | (empty) | Optional — emails log to console |
+| `SENTRY_DSN` | (empty) | Optional — error tracking |
+| `POLYGON_RPC_URL` | Polygon Amoy testnet | Blockchain anchoring |
+| `POLYGON_PRIVATE_KEY` | (empty) | Optional — blockchain disabled |
+
+## Testing
 
 ```bash
-# Terminal 1: Start Postgres (if not already running)
-/Applications/Postgres.app/Contents/Versions/latest/bin/pg_ctl \
-  -D "$HOME/Library/Application Support/Postgres/var-17" \
-  -l "$HOME/Library/Application Support/Postgres/var-17/server.log" start
-
-# Terminal 2: Start API
-cd /Volumes/WORKHORSE\ GS/vibecoding/firmas && pnpm --filter api dev
-
-# Terminal 3: Start Web
-cd /Volumes/WORKHORSE\ GS/vibecoding/firmas && pnpm --filter web dev
+pnpm --filter api test:unit          # Unit tests
+pnpm --filter api test:integration   # Integration tests (needs Postgres)
+pnpm --filter api test:coverage      # All tests with coverage
+cd apps/web && npx playwright test   # E2E tests (needs both servers)
 ```
 
-### Test user
+## Key Features
 
-- Email: `test@traza.dev`
-- Password: `TestPass123`
-
-## What Still Needs Doing
-
-- [x] PostgreSQL installed and running locally
-- [x] `prisma migrate dev` to create tables
-- [x] Verify API starts and `/health` returns OK
-- [x] Test auth flow (register + login + protected endpoints)
-- [x] PDF viewer + field placement feature
-- [x] Field-based signing experience
-- [ ] Initial git commit
-- [ ] Test full PDF signing flow:
-  - Upload PDF → Prepare (place fields) → Send → Sign → Complete
-  - Verify field positions are stable across zoom levels
-  - Test with multiple signers
-- [ ] Configure Resend API key for real emails (optional)
-- [ ] Configure Polygon private key for blockchain (optional)
-- [ ] Deploy (Vercel for web, Railway/Render for API, Neon for DB)
-
-## New Files Summary (PDF Feature)
-
-### Database
-- `packages/database/prisma/schema.prisma` - Added FieldType enum, DocumentField, FieldValue models
-
-### API (apps/api/src/)
-- `services/field.service.ts` - Field CRUD operations
-- `controllers/field.controller.ts` - Field endpoints
-- Modified: `routes/document.routes.ts` - Added field endpoints
-- Modified: `routes/signature.routes.ts` - Added PDF + fields signing endpoints
-- Modified: `services/signature.service.ts` - Field linking + field value persistence
-- Modified: `validators/signature.validators.ts` - Accept fieldValues in submission
-
-### Web (apps/web/src/)
-- `components/pdf/*` - PDF viewer (PdfViewer, PdfPage, PdfToolbar, usePdfDocument, types)
-- `components/field-placement/*` - Owner field placement (FieldPlacer, PlacedField, FieldToolbar, useFieldPlacement, SignerColorMap)
-- `components/signing/*` - Signer experience (SigningView, SignableField, all input types, useSigningState)
-- `app/(app)/documents/[id]/prepare/page.tsx` - Prepare document page
-- Modified: `app/sign/[token]/page.tsx` - Dual flow (PDF + fields or legacy)
+1. JWT auth with refresh tokens and bcrypt
+2. Multi-tenancy with organization-scoped data isolation
+3. Role-based access control (platform + org level)
+4. Super Admin console with user impersonation
+5. Feature flags per plan tier (FREE, STARTER, PRO, PROOF, ENTERPRISE)
+6. Document upload with SHA-256 hashing and magic byte validation
+7. S3-compatible file storage
+8. PDF viewer with drag-and-drop field placement
+9. Percentage-based field coordinates (zoom-independent)
+10. Signature workflow (send, sign, decline, expire)
+11. Blockchain anchoring on Polygon
+12. Cryptographic proof bundle generation (HMAC-signed)
+13. Webhook system with HMAC signatures and retry
+14. React Email templates (signature request, completed, reminder, expiration)
+15. GDPR data export and account deletion
+16. OpenAPI/Swagger documentation
+17. Rate limiting, security headers (Helmet CSP/HSTS), input sanitization
+18. Audit logging and request tracing (correlation IDs)
+19. Docker multi-stage production builds (Alpine + OpenSSL)
+20. Railway cloud deployment with PostgreSQL
+21. GitHub Actions CI pipeline
