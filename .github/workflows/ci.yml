@@ -25,6 +25,9 @@ jobs:
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+      NEXT_PUBLIC_API_URL: http://localhost:4000
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -35,11 +38,16 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+      - run: pnpm --filter @traza/database build
+      - run: pnpm --filter @traza/crypto build
+      - run: pnpm --filter @traza/api build
+      - run: pnpm --filter @traza/web build
 
   test-unit:
     name: Unit Tests
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -50,6 +58,8 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @traza/database build
+      - run: pnpm --filter @traza/crypto build
       - run: cd apps/api && pnpm test:unit
 
   test-integration:
@@ -96,6 +106,8 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @traza/database build
+      - run: pnpm --filter @traza/crypto build
       - run: cd packages/database && npx prisma migrate deploy
       - run: cd apps/api && pnpm test:integration
 
@@ -111,6 +123,7 @@ jobs:
             dockerfile: apps/api/Dockerfile
           - name: web
             dockerfile: apps/web/Dockerfile
+            build-args: NEXT_PUBLIC_API_URL=https://traza-web-production.up.railway.app
     steps:
       - uses: actions/checkout@v4
 
@@ -131,6 +144,7 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           push: ${{ github.ref == 'refs/heads/main' }}
+          build-args: ${{ matrix.build-args }}
           tags: |
             ghcr.io/${{ github.repository }}/traza-${{ matrix.name }}:${{ github.sha }}
             ghcr.io/${{ github.repository }}/traza-${{ matrix.name }}:latest

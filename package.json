@@ -11,7 +11,8 @@
     "test:integration": "pnpm -r test:integration",
     "lint": "pnpm -r lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "clean": "pnpm -r clean"
+    "clean": "pnpm -r clean",
+    "setup": "bash scripts/setup.sh"
   },
   "engines": {
     "node": ">=20",
