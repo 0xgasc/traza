@@ -29,6 +29,7 @@ interface SigningContext {
   signerEmail: string;
   message?: string;
   status: string;
+  waitingForPreviousSigners?: boolean;
 }
 
 interface ApiFieldPosition {
@@ -103,6 +104,12 @@ export default function PublicSigningPage() {
         // Fetch signing context
         const res = await fetch(API_BASE + "/api/v1/sign/" + token);
         if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const code = errData?.error?.code || errData?.code || "";
+          if (code === "VOIDED") throw new Error("VOIDED");
+          if (code === "EXPIRED") throw new Error("EXPIRED");
+          if (code === "ALREADY_SIGNED") throw new Error("ALREADY_SIGNED");
+          if (code === "DECLINED") throw new Error("DECLINED");
           throw new Error("Invalid or expired signing link.");
         }
         const data = await res.json();
@@ -204,13 +211,86 @@ export default function PublicSigningPage() {
   }
 
   if (error && !context) {
+    const isVoided = error === "VOIDED";
+    const isExpired = error === "EXPIRED";
+    const isAlreadySigned = error === "ALREADY_SIGNED";
+    const isDeclinedError = error === "DECLINED";
+
     return (
       <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
-        <div className="card max-w-lg w-full text-center">
+        <div className="card max-w-lg w-full text-center shadow-brutal">
           <h1 className="text-2xl font-bold tracking-tighter uppercase mb-4">
             Traza
           </h1>
-          <p className="font-semibold">{error}</p>
+          {isVoided && (
+            <>
+              <div className="p-4 bg-red-50 border-4 border-red-400 mb-4">
+                <p className="font-black uppercase text-red-700">Document Voided</p>
+              </div>
+              <p className="text-stone-600 text-sm">
+                This document was voided by the sender. No further action is required.
+              </p>
+            </>
+          )}
+          {isExpired && (
+            <>
+              <div className="p-4 bg-stone-100 border-4 border-stone-400 mb-4">
+                <p className="font-black uppercase text-stone-700">Link Expired</p>
+              </div>
+              <p className="text-stone-600 text-sm">
+                This signing link has expired. Contact the sender to request a new one.
+              </p>
+            </>
+          )}
+          {isAlreadySigned && (
+            <>
+              <div className="p-4 bg-green-50 border-4 border-green-400 mb-4">
+                <p className="font-black uppercase text-green-700">Already Signed</p>
+              </div>
+              <p className="text-stone-600 text-sm">
+                You have already signed this document.
+              </p>
+            </>
+          )}
+          {isDeclinedError && (
+            <>
+              <div className="p-4 bg-stone-100 border-4 border-stone-400 mb-4">
+                <p className="font-black uppercase text-stone-700">Signature Declined</p>
+              </div>
+              <p className="text-stone-600 text-sm">
+                You previously declined to sign this document.
+              </p>
+            </>
+          )}
+          {!isVoided && !isExpired && !isAlreadySigned && !isDeclinedError && (
+            <p className="font-semibold text-red-700">{error}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Waiting for previous signers in a sequential workflow
+  if (context?.waitingForPreviousSigners) {
+    return (
+      <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
+        <div className="card max-w-lg w-full text-center shadow-brutal">
+          <h1 className="text-2xl font-bold tracking-tighter uppercase mb-2">Traza</h1>
+          <h2 className="text-lg font-bold uppercase tracking-tight mb-4">
+            {context.documentTitle}
+          </h2>
+          <div className="p-6 bg-yellow-50 border-4 border-yellow-400 mb-4">
+            <p className="font-black uppercase text-yellow-800 text-lg mb-2">
+              Not Your Turn Yet
+            </p>
+            <p className="text-yellow-900 text-sm">
+              Hi {context.signerName}, previous signers must complete their signatures before
+              you can sign this document.
+            </p>
+          </div>
+          <p className="text-stone-500 text-sm">
+            You will receive an email when it&apos;s your turn to sign.
+          </p>
         </div>
       </div>
     );

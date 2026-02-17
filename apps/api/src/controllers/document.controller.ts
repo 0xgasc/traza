@@ -63,6 +63,19 @@ export async function getDownloadUrl(req: Request, res: Response, next: NextFunc
   }
 }
 
+export async function voidDocument(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await documentService.voidDocument(
+      req.params.id as string,
+      req.user!.userId,
+      req.body.reason,
+    );
+    success(res, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function deleteDocument(req: Request, res: Response, next: NextFunction) {
   try {
     await documentService.deleteDocument(req.params.id as string, req.user!.userId);

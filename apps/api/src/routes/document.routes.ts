@@ -58,6 +58,8 @@ router.get('/:id/fields', requireAuth, fieldController.getDocumentFields);
 
 router.put('/:id/fields', requireAuth, fieldController.saveDocumentFields);
 
+router.post('/:id/void', requireAuth, documentController.voidDocument);
+
 router.delete('/:id', requireAuth, documentController.deleteDocument);
 
 export default router;

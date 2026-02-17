@@ -134,10 +134,11 @@ app.use('/api/v1/admin', adminRoutes);
 // GDPR / Account management
 app.use('/api/v1/account', gdprRoutes);
 
-// Document extra endpoints (verify, anchor, proof)
+// Document extra endpoints (verify, anchor, proof, certificate)
 app.get('/api/v1/documents/:id/verify', requireAuth, extraController.verifyDocument);
 app.post('/api/v1/documents/:id/anchor', requireAuth, extraController.anchorDocument);
 app.post('/api/v1/documents/:id/proof', requireAuth, extraController.generateProof);
+app.get('/api/v1/documents/:id/certificate', requireAuth, extraController.getCertificate);
 
 // Dashboard
 app.get('/api/v1/dashboard/stats', requireAuth, extraController.getDashboardStats);

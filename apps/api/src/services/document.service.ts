@@ -3,6 +3,8 @@ import { hashBuffer } from '@traza/crypto';
 import { AppError } from '../middleware/error.middleware.js';
 import * as storage from './storage.service.js';
 import { generateStorageKey, validateMagicBytes } from '../utils/fileValidation.js';
+import { sendExpirationNoticeEmail } from './email.service.js';
+import { getEnv } from '../config/env.js';
 import path from 'node:path';
 
 interface CreateDocumentInput {
@@ -127,6 +129,73 @@ export async function getDownloadUrl(id: string, userId: string) {
   });
 
   return { downloadUrl };
+}
+
+export async function voidDocument(id: string, userId: string, reason?: string) {
+  const document = await prisma.document.findUnique({
+    where: { id },
+    include: {
+      owner: { select: { name: true, email: true } },
+      signatures: {
+        where: { status: 'PENDING' },
+        select: { id: true, signerEmail: true, signerName: true, token: true },
+      },
+    },
+  });
+
+  if (!document || document.ownerId !== userId) {
+    throw new AppError(404, 'NOT_FOUND', 'Document not found');
+  }
+
+  if (document.status !== 'PENDING') {
+    throw new AppError(400, 'INVALID_STATUS', 'Only pending documents can be voided');
+  }
+
+  const env = getEnv();
+
+  await prisma.$transaction(async (tx) => {
+    // Mark document as VOID
+    await tx.document.update({
+      where: { id },
+      data: {
+        status: 'VOID',
+        voidedAt: new Date(),
+        voidReason: reason ?? null,
+      },
+    });
+
+    // Mark all pending signatures as DECLINED
+    await tx.signature.updateMany({
+      where: { documentId: id, status: 'PENDING' },
+      data: { status: 'DECLINED' },
+    });
+
+    // Audit log
+    await tx.auditLog.create({
+      data: {
+        documentId: id,
+        eventType: 'document.voided',
+        actorId: userId,
+        metadata: { reason: reason ?? null, pendingSigners: document.signatures.length },
+      },
+    });
+  });
+
+  // Notify pending signers (fire-and-forget)
+  const senderEmail = document.owner?.email ?? 'no-reply@traza.dev';
+  for (const sig of document.signatures) {
+    sendExpirationNoticeEmail({
+      to: sig.signerEmail,
+      recipientName: sig.signerName,
+      documentTitle: document.title,
+      expiredAt: new Date(),
+      senderEmail,
+    }).catch((err) => {
+      console.warn(`[email] Failed to notify signer of void:`, err.message);
+    });
+  }
+
+  return { voided: true };
 }
 
 export async function deleteDocument(id: string, userId: string) {

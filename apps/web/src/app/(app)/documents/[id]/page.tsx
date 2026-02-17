@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, getAccessToken } from "@/lib/api";
 
 interface Signature {
   id: string;
@@ -32,6 +32,7 @@ const STATUS_MAP: Record<string, string> = {
   SIGNED: "bg-green-100 text-green-800 border-green-400",
   DECLINED: "bg-red-100 text-red-800 border-red-400",
   EXPIRED: "bg-stone-300 text-stone-600",
+  VOID: "bg-red-100 text-red-700 border-red-400",
 };
 
 function statusClass(status: string): string {
@@ -66,9 +67,26 @@ export default function DocumentDetailPage() {
     setActionLoading(action);
     try {
       if (action === "download") {
-        // Download uses GET and returns a presigned URL
         const result = await apiGet<{ downloadUrl: string }>("/api/v1/documents/" + id + "/download");
         window.open(result.downloadUrl, "_blank");
+      } else if (action === "certificate") {
+        // Fetch HTML with auth headers, then open as blob
+        const token = getAccessToken();
+        const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        const res = await fetch(`${base}/api/v1/documents/${id}/certificate`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error("Failed to generate certificate");
+        const html = await res.text();
+        const blob = new Blob([html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank");
+      } else if (action === "void") {
+        const reason = prompt("Optional: enter a reason for voiding this document:");
+        if (reason === null) return; // user cancelled
+        await apiPost("/api/v1/documents/" + id + "/void", { reason: reason || undefined });
+        const data = await apiGet<DocumentDetail>("/api/v1/documents/" + id);
+        setDoc(data);
       } else {
         await apiPost("/api/v1/documents/" + id + "/" + action);
         const data = await apiGet<DocumentDetail>("/api/v1/documents/" + id);
@@ -158,33 +176,64 @@ export default function DocumentDetailPage() {
         >
           {actionLoading === "download" ? "..." : "Download"}
         </button>
-        <Link href={prepareHref} className="btn">
-          Prepare for Signing
-        </Link>
-        <Link href={sendHref} className="btn">
-          Send for Signing
-        </Link>
+
+        {doc.status === "DRAFT" && (
+          <>
+            <Link href={prepareHref} className="btn">
+              Prepare for Signing
+            </Link>
+            <Link href={sendHref} className="btn">
+              Send for Signing
+            </Link>
+          </>
+        )}
+
+        {doc.status === "SIGNED" && (
+          <>
+            <button
+              onClick={() => handleAction("certificate")}
+              disabled={actionLoading !== ""}
+              className="btn"
+            >
+              {actionLoading === "certificate" ? "..." : "Certificate of Completion"}
+            </button>
+            <button
+              onClick={() => handleAction("proof")}
+              disabled={actionLoading !== ""}
+              className="btn-secondary"
+            >
+              {actionLoading === "proof" ? "..." : "Download Proof Bundle"}
+            </button>
+          </>
+        )}
+
+        {doc.status === "PENDING" && (
+          <button
+            onClick={() => handleAction("void")}
+            disabled={actionLoading !== ""}
+            className="bg-red-600 text-white font-bold uppercase tracking-wide px-4 py-2 border-4 border-red-600 hover:bg-red-700 transition-colors text-sm disabled:opacity-40"
+          >
+            {actionLoading === "void" ? "Voiding..." : "Void Document"}
+          </button>
+        )}
+
         <button
           onClick={() => handleAction("verify")}
           disabled={actionLoading !== ""}
           className="btn-secondary"
         >
-          {actionLoading === "verify" ? "..." : "Verify"}
+          {actionLoading === "verify" ? "..." : "Verify Integrity"}
         </button>
-        <button
-          onClick={() => handleAction("anchor")}
-          disabled={actionLoading !== ""}
-          className="btn-secondary"
-        >
-          {actionLoading === "anchor" ? "..." : "Anchor"}
-        </button>
-        <button
-          onClick={() => handleAction("proof")}
-          disabled={actionLoading !== ""}
-          className="btn-secondary"
-        >
-          {actionLoading === "proof" ? "..." : "Generate Proof"}
-        </button>
+
+        {!doc.blockchainTxHash && (doc.status === "SIGNED" || doc.status === "PENDING") && (
+          <button
+            onClick={() => handleAction("anchor")}
+            disabled={actionLoading !== ""}
+            className="btn-secondary"
+          >
+            {actionLoading === "anchor" ? "..." : "Anchor to Blockchain"}
+          </button>
+        )}
       </div>
 
       {/* Signers Table */}
@@ -197,6 +246,9 @@ export default function DocumentDetailPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b-4 border-black bg-black text-white">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                    #
+                  </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
                     Name
                   </th>
@@ -217,6 +269,9 @@ export default function DocumentDetailPage() {
                     key={sig.id}
                     className="border-b-2 border-stone-200 hover:bg-stone-50"
                   >
+                    <td className="px-4 py-3 text-sm font-mono text-stone-400">
+                      {sig.order}
+                    </td>
                     <td className="px-4 py-3 font-semibold text-sm">
                       {sig.signerName}
                     </td>

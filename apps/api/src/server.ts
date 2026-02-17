@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { initSentry } from './config/sentry.js';
 import { logger } from './config/logger.js';
 import { startWebhookWorker } from './workers/webhook.worker.js';
+import { startReminderWorker } from './workers/reminder.worker.js';
 import app from './app.js';
 
 // Initialize Sentry before anything else
@@ -16,4 +17,5 @@ app.listen(PORT, () => {
 
   // Start background workers
   startWebhookWorker();
+  startReminderWorker();
 });

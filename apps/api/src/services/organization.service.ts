@@ -490,8 +490,8 @@ export async function inviteMember(
   // Send invitation email (non-blocking — email failures don't break the invite)
   sendOrgInvitationEmail({
     to: input.email,
-    inviteeName: input.email.split('@')[0],
-    inviterName: invitation.invitedBy.name,
+    inviteeName: input.email.split('@')[0] ?? input.email,
+    inviterName: invitation.invitedBy.name ?? 'A team member',
     organizationName: invitation.organization.name,
     role: input.role,
     token,

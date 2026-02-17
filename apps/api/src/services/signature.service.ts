@@ -151,6 +151,10 @@ export async function getSigningContext(token: string) {
     throw new AppError(404, 'NOT_FOUND', 'Signature request not found');
   }
 
+  if (signature.document.status === 'VOID') {
+    throw new AppError(410, 'VOIDED', 'This document has been voided by the sender');
+  }
+
   if (signature.status === 'SIGNED') {
     throw new AppError(400, 'ALREADY_SIGNED', 'This document has already been signed');
   }
@@ -163,14 +167,31 @@ export async function getSigningContext(token: string) {
     throw new AppError(410, 'EXPIRED', 'This signing link has expired');
   }
 
-  // Log view
-  await prisma.auditLog.create({
-    data: {
-      documentId: payload.documentId,
-      eventType: 'document.viewed',
-      metadata: { signerEmail: signature.signerEmail },
-    },
+  // Check sequential signing order: are all previous signers done?
+  const allSignatures = await prisma.signature.findMany({
+    where: { documentId: signature.documentId },
+    select: { id: true, order: true, status: true },
+    orderBy: { order: 'asc' },
   });
+
+  const hasManyOrders = new Set(allSignatures.map((s) => s.order)).size > 1;
+  let waitingForPreviousSigners = false;
+
+  if (hasManyOrders) {
+    const previousSigners = allSignatures.filter((s) => s.order < signature.order);
+    waitingForPreviousSigners = previousSigners.some((s) => s.status === 'PENDING');
+  }
+
+  // Log view (only if it's their turn)
+  if (!waitingForPreviousSigners) {
+    await prisma.auditLog.create({
+      data: {
+        documentId: payload.documentId,
+        eventType: 'document.viewed',
+        metadata: { signerEmail: signature.signerEmail },
+      },
+    });
+  }
 
   return {
     signatureId: signature.id,
@@ -178,6 +199,7 @@ export async function getSigningContext(token: string) {
     signerEmail: signature.signerEmail,
     signerName: signature.signerName,
     status: signature.status,
+    waitingForPreviousSigners,
   };
 }
 
@@ -205,6 +227,26 @@ export async function submitSignature(
 
   if (signature.tokenExpiresAt < new Date()) {
     throw new AppError(410, 'EXPIRED', 'This signing link has expired');
+  }
+
+  // Enforce signing order: block if previous signers haven't signed yet
+  const siblingSignatures = await prisma.signature.findMany({
+    where: { documentId: payload.documentId },
+    select: { id: true, order: true, status: true },
+  });
+
+  const hasManyOrders = new Set(siblingSignatures.map((s) => s.order)).size > 1;
+  if (hasManyOrders) {
+    const previousPending = siblingSignatures.some(
+      (s) => s.order < signature.order && s.status === 'PENDING',
+    );
+    if (previousPending) {
+      throw new AppError(
+        409,
+        'AWAITING_PREVIOUS_SIGNERS',
+        'Previous signers must complete before you can sign',
+      );
+    }
   }
 
   // Use a transaction to update signature and create field values atomically

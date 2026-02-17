@@ -23,6 +23,7 @@ enum DocumentStatus {
   PENDING
   SIGNED
   EXPIRED
+  VOID
 }
 
 enum SignatureType {
@@ -191,6 +192,8 @@ model Document {
   pageCount         Int?
   blockchainTxHash  String?
   blockchainNetwork String?
+  voidedAt          DateTime?
+  voidReason        String?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
@@ -223,6 +226,7 @@ model Signature {
   tokenExpiresAt  DateTime
   status          SignatureStatus @default(PENDING)
   order           Int             @default(1)
+  reminderSentAt  DateTime?
   createdAt       DateTime        @default(now())
 
   document    Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
