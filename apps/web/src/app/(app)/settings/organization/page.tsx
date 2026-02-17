@@ -1,0 +1,441 @@
+"use client";
+
+import { useState, useEffect, FormEvent } from "react";
+import { useAuth } from "@/lib/auth";
+import { apiGet, apiPatch, apiPost, apiDelete } from "@/lib/api";
+
+type Tab = "general" | "members" | "invitations";
+
+interface OrgDetails {
+  id: string;
+  name: string;
+  slug: string;
+  planTier: string;
+  status: string;
+  logoUrl?: string;
+  primaryColor?: string;
+  billingEmail?: string;
+  _count: { members: number; documents: number };
+}
+
+interface Member {
+  id: string;
+  role: string;
+  joinedAt: string;
+  user: { id: string; name: string; email: string };
+}
+
+interface Invitation {
+  id: string;
+  email: string;
+  role: string;
+  createdAt: string;
+  expiresAt: string;
+  invitedBy: { name: string; email: string };
+}
+
+export default function OrganizationSettingsPage() {
+  const { currentOrg } = useAuth();
+  const [activeTab, setActiveTab] = useState<Tab>("general");
+
+  if (!currentOrg) {
+    return (
+      <div className="max-w-lg">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tighter uppercase">Organization</h1>
+        </div>
+        <div className="p-6 border-4 border-black bg-white">
+          <p className="font-semibold mb-4">You&apos;re not part of any organization.</p>
+          <a href="/settings/organization/new" className="btn inline-block">
+            Create Organization
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "general", label: "General" },
+    { key: "members", label: "Members" },
+    { key: "invitations", label: "Invitations" },
+  ];
+
+  const isOwnerOrAdmin = currentOrg.role === "OWNER" || currentOrg.role === "ADMIN";
+
+  return (
+    <div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tighter uppercase">
+          Organization Settings
+        </h1>
+        <p className="text-sm text-stone-500 font-mono mt-1">
+          {currentOrg.name.toUpperCase()} · {currentOrg.role}
+        </p>
+      </div>
+
+      <div className="flex border-4 border-black mb-8 bg-white">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-1 px-4 py-3 font-semibold uppercase text-sm tracking-wide transition-colors ${
+              activeTab === tab.key ? "bg-black text-white" : "bg-white text-black hover:bg-stone-100"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "general" && (
+        <GeneralTab orgId={currentOrg.id} canEdit={isOwnerOrAdmin} />
+      )}
+      {activeTab === "members" && (
+        <MembersTab orgId={currentOrg.id} canManage={isOwnerOrAdmin} currentUserId={currentOrg.id} />
+      )}
+      {activeTab === "invitations" && (
+        <InvitationsTab orgId={currentOrg.id} canManage={isOwnerOrAdmin} />
+      )}
+    </div>
+  );
+}
+
+function GeneralTab({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
+  const [org, setOrg] = useState<OrgDetails | null>(null);
+  const [name, setName] = useState("");
+  const [billingEmail, setBillingEmail] = useState("");
+  const [primaryColor, setPrimaryColor] = useState("#000000");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    apiGet<{ organization: OrgDetails }>(`/api/v1/organizations/${orgId}`)
+      .then((data) => {
+        setOrg(data.organization);
+        setName(data.organization.name);
+        setBillingEmail(data.organization.billingEmail || "");
+        setPrimaryColor(data.organization.primaryColor || "#000000");
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [orgId]);
+
+  const handleSave = async (e: FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage("");
+    try {
+      await apiPatch(`/api/v1/organizations/${orgId}`, {
+        name: name.trim(),
+        billingEmail: billingEmail.trim() || undefined,
+        primaryColor,
+      });
+      setMessage("Saved successfully.");
+    } catch (err: unknown) {
+      setMessage(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-12 bg-stone-200 animate-pulse" />)}</div>;
+  }
+
+  return (
+    <div className="max-w-lg">
+      {message && (
+        <div className="mb-6 p-4 border-4 border-black bg-stone-100">
+          <p className="text-sm font-semibold">{message}</p>
+        </div>
+      )}
+
+      {org && (
+        <div className="mb-6 flex gap-4 text-sm font-mono text-stone-500">
+          <span>PLAN: {org.planTier}</span>
+          <span>·</span>
+          <span>MEMBERS: {org._count.members}</span>
+          <span>·</span>
+          <span>DOCS: {org._count.documents}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSave} className="space-y-5">
+        <div>
+          <label className="block text-sm font-semibold uppercase tracking-wide mb-2">
+            Organization Name
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="input w-full"
+            disabled={!canEdit}
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold uppercase tracking-wide mb-2">
+            Slug
+          </label>
+          <input
+            type="text"
+            value={org?.slug || ""}
+            className="input w-full bg-stone-50 font-mono"
+            disabled
+          />
+          <p className="text-xs text-stone-500 font-mono mt-1">SLUG CANNOT BE CHANGED</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold uppercase tracking-wide mb-2">
+            Billing Email
+          </label>
+          <input
+            type="email"
+            value={billingEmail}
+            onChange={(e) => setBillingEmail(e.target.value)}
+            className="input w-full"
+            disabled={!canEdit}
+            placeholder="billing@yourcompany.com"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold uppercase tracking-wide mb-2">
+            Brand Color
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              value={primaryColor}
+              onChange={(e) => setPrimaryColor(e.target.value)}
+              className="w-12 h-12 border-4 border-black cursor-pointer"
+              disabled={!canEdit}
+            />
+            <input
+              type="text"
+              value={primaryColor}
+              onChange={(e) => setPrimaryColor(e.target.value)}
+              className="input w-32 font-mono"
+              disabled={!canEdit}
+              pattern="#[0-9A-Fa-f]{6}"
+            />
+          </div>
+        </div>
+
+        {canEdit && (
+          <button type="submit" disabled={saving} className="btn">
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
+        )}
+      </form>
+    </div>
+  );
+}
+
+function MembersTab({
+  orgId,
+  canManage,
+  currentUserId,
+}: {
+  orgId: string;
+  canManage: boolean;
+  currentUserId: string;
+}) {
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchMembers = () => {
+    apiGet<{ members: Member[] }>(`/api/v1/organizations/${orgId}/members`)
+      .then((data) => setMembers(data.members))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchMembers(); }, [orgId]);
+
+  const handleRemove = async (memberId: string) => {
+    if (!confirm("Remove this member?")) return;
+    try {
+      await apiDelete(`/api/v1/organizations/${orgId}/members/${memberId}`);
+      fetchMembers();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to remove member");
+    }
+  };
+
+  const handleRoleChange = async (memberId: string, role: string) => {
+    try {
+      await apiPatch(`/api/v1/organizations/${orgId}/members/${memberId}`, { role });
+      fetchMembers();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to update role");
+    }
+  };
+
+  if (loading) {
+    return <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-16 bg-stone-200 animate-pulse" />)}</div>;
+  }
+
+  return (
+    <div className="max-w-2xl">
+      <div className="space-y-2">
+        {members.map((member) => (
+          <div key={member.id} className="flex items-center justify-between p-4 bg-white border-4 border-black">
+            <div>
+              <p className="font-semibold text-sm">{member.user.name}</p>
+              <p className="text-xs text-stone-500 font-mono">{member.user.email}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {canManage && member.role !== "OWNER" ? (
+                <select
+                  value={member.role}
+                  onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                  className="input py-1 text-xs font-semibold uppercase"
+                >
+                  <option value="ADMIN">Admin</option>
+                  <option value="MEMBER">Member</option>
+                  <option value="VIEWER">Viewer</option>
+                </select>
+              ) : (
+                <span className="text-xs font-bold uppercase px-3 py-1 border-2 border-black">
+                  {member.role}
+                </span>
+              )}
+              {canManage && member.role !== "OWNER" && (
+                <button
+                  onClick={() => handleRemove(member.id)}
+                  className="text-xs font-semibold uppercase px-3 py-1 border-2 border-black hover:bg-black hover:text-white transition-colors"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InvitationsTab({ orgId, canManage }: { orgId: string; canManage: boolean }) {
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("MEMBER");
+  const [inviting, setInviting] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const fetchInvitations = () => {
+    apiGet<{ invitations: Invitation[] }>(`/api/v1/organizations/${orgId}/invitations`)
+      .then((data) => setInvitations(data.invitations))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchInvitations(); }, [orgId]);
+
+  const handleInvite = async (e: FormEvent) => {
+    e.preventDefault();
+    setInviting(true);
+    setMessage("");
+    try {
+      await apiPost(`/api/v1/organizations/${orgId}/invitations`, {
+        email: email.trim(),
+        role,
+      });
+      setEmail("");
+      setMessage(`Invitation sent to ${email.trim()}`);
+      fetchInvitations();
+    } catch (err: unknown) {
+      setMessage(err instanceof Error ? err.message : "Failed to invite");
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleRevoke = async (invitationId: string) => {
+    try {
+      await apiDelete(`/api/v1/organizations/${orgId}/invitations/${invitationId}`);
+      fetchInvitations();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to revoke");
+    }
+  };
+
+  return (
+    <div className="max-w-2xl space-y-8">
+      {canManage && (
+        <div>
+          <h3 className="text-sm font-bold uppercase tracking-wide mb-4">Invite New Member</h3>
+
+          {message && (
+            <div className="mb-4 p-4 border-4 border-black bg-stone-100">
+              <p className="text-sm font-semibold">{message}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleInvite} className="flex gap-3">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="colleague@company.com"
+              className="input flex-1"
+              required
+            />
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="input w-32 font-semibold uppercase text-sm"
+            >
+              <option value="ADMIN">Admin</option>
+              <option value="MEMBER">Member</option>
+              <option value="VIEWER">Viewer</option>
+            </select>
+            <button type="submit" disabled={inviting} className="btn whitespace-nowrap">
+              {inviting ? "Sending..." : "Send Invite"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      <div>
+        <h3 className="text-sm font-bold uppercase tracking-wide mb-4">Pending Invitations</h3>
+
+        {loading ? (
+          <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-14 bg-stone-200 animate-pulse" />)}</div>
+        ) : invitations.length === 0 ? (
+          <div className="p-4 border-4 border-black bg-white">
+            <p className="text-sm text-stone-500">No pending invitations.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {invitations.map((inv) => (
+              <div key={inv.id} className="flex items-center justify-between p-4 bg-white border-4 border-black">
+                <div>
+                  <p className="font-semibold text-sm">{inv.email}</p>
+                  <p className="text-xs text-stone-500 font-mono">
+                    {inv.role} · invited by {inv.invitedBy.name} · expires{" "}
+                    {new Date(inv.expiresAt).toLocaleDateString()}
+                  </p>
+                </div>
+                {canManage && (
+                  <button
+                    onClick={() => handleRevoke(inv.id)}
+                    className="text-xs font-semibold uppercase px-3 py-1 border-2 border-black hover:bg-black hover:text-white transition-colors"
+                  >
+                    Revoke
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

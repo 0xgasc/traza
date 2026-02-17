@@ -5,6 +5,7 @@ import { SignatureRequest } from '../emails/SignatureRequest.js';
 import { DocumentCompleted } from '../emails/DocumentCompleted.js';
 import { Reminder } from '../emails/Reminder.js';
 import { ExpirationNotice } from '../emails/ExpirationNotice.js';
+import { OrgInvitation } from '../emails/OrgInvitation.js';
 
 let resend: Resend | null = null;
 
@@ -137,6 +138,36 @@ export async function sendExpirationNoticeEmail(params: {
   await sendEmail(
     params.to,
     `Signing link for "${params.documentTitle}" has expired`,
+    html,
+  );
+}
+
+export async function sendOrgInvitationEmail(params: {
+  to: string;
+  inviteeName: string;
+  inviterName: string;
+  organizationName: string;
+  role: string;
+  token: string;
+  expiresAt: Date;
+}) {
+  const env = getEnv();
+  const acceptUrl = `${env.APP_URL}/invite/${params.token}`;
+
+  const html = await render(
+    OrgInvitation({
+      inviteeName: params.inviteeName,
+      inviterName: params.inviterName,
+      organizationName: params.organizationName,
+      role: params.role,
+      acceptUrl,
+      expiresAt: params.expiresAt,
+    }),
+  );
+
+  await sendEmail(
+    params.to,
+    `${params.inviterName} invited you to join ${params.organizationName}`,
     html,
   );
 }

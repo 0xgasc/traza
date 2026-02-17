@@ -2,6 +2,7 @@ import { prisma } from '@traza/database';
 import crypto from 'crypto';
 import { AppError } from '../middleware/error.middleware.js';
 import { generateAccessToken } from '../utils/jwt.js';
+import { sendOrgInvitationEmail } from './email.service.js';
 import type { OrgRole } from '@traza/database';
 
 // ============================================
@@ -486,8 +487,18 @@ export async function inviteMember(
     },
   });
 
-  // TODO: Send invitation email
-  // await sendInvitationEmail(input.email, invitation);
+  // Send invitation email (non-blocking — email failures don't break the invite)
+  sendOrgInvitationEmail({
+    to: input.email,
+    inviteeName: input.email.split('@')[0],
+    inviterName: invitation.invitedBy.name,
+    organizationName: invitation.organization.name,
+    role: input.role,
+    token,
+    expiresAt,
+  }).catch((err) => {
+    console.warn('[org] Failed to send invitation email:', err.message);
+  });
 
   return invitation;
 }
