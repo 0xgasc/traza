@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { apiGet, apiPatch, apiPost } from '@/lib/api';
+import { apiGet, apiPatch, apiPost, apiDelete } from '@/lib/api';
 
 interface Member {
   id: string;
@@ -367,13 +367,14 @@ export default function OrganizationDetailPage() {
               All documents and data will be lost.
             </p>
             <button
-              onClick={() => {
-                if (confirm('Are you ABSOLUTELY sure? This action cannot be undone. Type the organization slug to confirm.')) {
-                  const input = prompt(`Type "${org.slug}" to confirm deletion:`);
-                  if (input === org.slug) {
-                    // TODO: Implement delete
-                    alert('Delete functionality coming soon');
-                  }
+              onClick={async () => {
+                const input = prompt(`Type "${org.slug}" to confirm permanent deletion:`);
+                if (input !== org.slug) return;
+                try {
+                  await apiDelete(`/api/v1/admin/organizations/${org.id}`);
+                  router.push('/admin/organizations');
+                } catch (err: any) {
+                  alert(err.message || 'Failed to delete organization');
                 }
               }}
               className="w-full px-4 py-2 bg-red-600 text-white font-bold uppercase text-sm hover:bg-red-700 transition-colors"

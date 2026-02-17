@@ -4,10 +4,16 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import AdminSidebar from '@/components/AdminSidebar';
-import { getAccessToken } from '@/lib/api';
+import { getAccessToken, setAccessToken, apiPost } from '@/lib/api';
 
-// Decode JWT to check platformRole
-function decodeToken(token: string): { platformRole?: string } | null {
+// Decode JWT to check platformRole and impersonation state
+function decodeToken(token: string): {
+  platformRole?: string;
+  isImpersonating?: boolean;
+  email?: string;
+  realUserId?: string;
+  impersonationSessionId?: string;
+} | null {
   try {
     const payload = token.split('.')[1];
     return JSON.parse(atob(payload));
@@ -17,11 +23,12 @@ function decodeToken(token: string): { platformRole?: string } | null {
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [impersonatingEmail, setImpersonatingEmail] = useState<string | null>(null);
+  const [endingSession, setEndingSession] = useState(false);
 
   useEffect(() => {
     if (!isLoading) {
@@ -30,16 +37,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         return;
       }
 
-      // Check if user is super admin from JWT
       const token = getAccessToken();
       if (token) {
         const decoded = decodeToken(token);
         if (decoded?.platformRole === 'SUPER_ADMIN') {
           setIsSuperAdmin(true);
-          // Check for impersonation
-          if ((decoded as any).isImpersonating) {
+          if (decoded.isImpersonating) {
             setIsImpersonating(true);
-            setImpersonatingEmail((decoded as any).email);
+            setImpersonatingEmail(decoded.email ?? null);
           }
         } else {
           setIsSuperAdmin(false);
@@ -51,6 +56,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }
     }
   }, [isAuthenticated, isLoading, router]);
+
+  const handleEndSession = async () => {
+    const token = getAccessToken();
+    if (!token) return;
+    const decoded = decodeToken(token);
+    if (!decoded?.realUserId || !decoded?.impersonationSessionId) return;
+
+    setEndingSession(true);
+    try {
+      const result = await apiPost<{ accessToken: string }>(
+        '/api/v1/admin/impersonation/end',
+        { sessionId: decoded.impersonationSessionId, realUserId: decoded.realUserId }
+      );
+      setAccessToken(result.accessToken);
+      window.location.href = '/admin';
+    } catch (err: any) {
+      alert(err.message || 'Failed to end session');
+      setEndingSession(false);
+    }
+  };
 
   if (isLoading || isSuperAdmin === null) {
     return (
@@ -77,13 +102,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             Impersonating: {impersonatingEmail}
           </span>
           <button
-            onClick={() => {
-              // TODO: Implement end impersonation
-              alert('End impersonation coming soon');
-            }}
-            className="bg-black text-white px-4 py-1 text-sm hover:bg-zinc-800 transition-colors"
+            onClick={handleEndSession}
+            disabled={endingSession}
+            className="bg-black text-white px-4 py-1 text-sm hover:bg-zinc-800 transition-colors disabled:opacity-50"
           >
-            End Session
+            {endingSession ? 'Ending...' : 'End Session'}
           </button>
         </div>
       )}
