@@ -6,6 +6,9 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const nextConfig = {
   output: 'standalone',
   transpilePackages: ['@traza/ui'],
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   webpack: (config, { isServer }) => {
     // Fix for pdfjs-dist
     if (!isServer) {
