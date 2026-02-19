@@ -8,6 +8,7 @@ import OrgSwitcher from './OrgSwitcher';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/documents', label: 'Documents' },
+  { href: '/templates', label: 'Templates' },
   { href: '/settings', label: 'Settings' },
 ];
 

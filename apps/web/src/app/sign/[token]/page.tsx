@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import SignatureCapture from "@/components/SignatureCapture";
 
@@ -30,6 +30,7 @@ interface SigningContext {
   message?: string;
   status: string;
   waitingForPreviousSigners?: boolean;
+  requiresAccessCode?: boolean;
 }
 
 interface ApiFieldPosition {
@@ -88,6 +89,8 @@ function mapApiFieldToPosition(apiField: ApiFieldPosition): FieldPosition {
 export default function PublicSigningPage() {
   const params = useParams();
   const token = params.token as string;
+  const searchParams = useSearchParams();
+  const isEmbed = searchParams.get("embed") === "1";
 
   const [context, setContext] = useState<SigningContext | null>(null);
   const [fields, setFields] = useState<FieldPosition[] | null>(null);
@@ -96,7 +99,23 @@ export default function PublicSigningPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [documentCompleted, setDocumentCompleted] = useState(false);
   const [declined, setDeclined] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
+  const [showDeclineForm, setShowDeclineForm] = useState(false);
+  const [accessCodeInput, setAccessCodeInput] = useState("");
+  const [accessCodeError, setAccessCodeError] = useState("");
+  const [accessCodeVerified, setAccessCodeVerified] = useState(false);
+
+  // Branding
+  const [branding, setBranding] = useState<{ logoUrl: string | null; primaryColor: string | null }>({ logoUrl: null, primaryColor: null });
+
+  // Delegation
+  const [showDelegateForm, setShowDelegateForm] = useState(false);
+  const [delegateEmail, setDelegateEmail] = useState("");
+  const [delegateName, setDelegateName] = useState("");
+  const [delegating, setDelegating] = useState(false);
+  const [delegated, setDelegated] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -114,6 +133,12 @@ export default function PublicSigningPage() {
         }
         const data = await res.json();
         setContext(data);
+
+        // Fetch branding (fire-and-forget)
+        fetch(API_BASE + "/api/v1/sign/" + token + "/branding")
+          .then((r) => r.ok ? r.json() : null)
+          .then((b) => { if (b) setBranding(b); })
+          .catch(() => {});
 
         // Fetch fields for the new signing flow
         try {
@@ -164,7 +189,12 @@ export default function PublicSigningPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.message || "Failed to submit signature.");
       }
+      const result = await res.json().catch(() => ({}));
+      setDocumentCompleted(result.documentCompleted === true);
       setCompleted(true);
+      if (isEmbed) {
+        window.parent.postMessage({ type: "traza:signed", documentCompleted: result.documentCompleted === true }, "*");
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Submission failed";
       setError(msg);
@@ -181,6 +211,7 @@ export default function PublicSigningPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: declineReason.trim() || undefined }),
         }
       );
       if (!res.ok) {
@@ -188,11 +219,53 @@ export default function PublicSigningPage() {
         throw new Error(data.message || "Failed to decline.");
       }
       setDeclined(true);
+      setShowDeclineForm(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Decline failed";
       setError(msg);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDelegate = async () => {
+    if (!delegateEmail.trim() || !delegateName.trim()) return;
+    setDelegating(true);
+    try {
+      const res = await fetch(API_BASE + "/api/v1/sign/" + token + "/delegate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: delegateEmail.trim().toLowerCase(), name: delegateName.trim() }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d?.error?.message || "Delegation failed");
+      }
+      setDelegated(true);
+      setShowDelegateForm(false);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Delegation failed");
+    } finally {
+      setDelegating(false);
+    }
+  };
+
+  const handleVerifyAccessCode = async () => {
+    setAccessCodeError("");
+    try {
+      await fetch(API_BASE + "/api/v1/sign/" + token + "/access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: accessCodeInput }),
+      }).then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error?.message || "Incorrect access code.");
+        }
+      });
+      setAccessCodeVerified(true);
+    } catch (err: unknown) {
+      setAccessCodeError(err instanceof Error ? err.message : "Incorrect access code.");
     }
   };
 
@@ -296,22 +369,107 @@ export default function PublicSigningPage() {
     );
   }
 
+  // Access code gate
+  if (context?.requiresAccessCode && !accessCodeVerified) {
+    return (
+      <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
+        <div className="card max-w-sm w-full shadow-brutal">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold tracking-tighter uppercase">Traza</h1>
+            <p className="text-xs text-stone-500 font-mono mt-1">ACCESS REQUIRED</p>
+          </div>
+          <div className="mb-6">
+            <p className="text-sm font-semibold mb-1">{context.documentTitle}</p>
+            <p className="text-sm text-stone-500">
+              This document is protected. Enter the access code provided by the sender.
+            </p>
+          </div>
+          {accessCodeError && (
+            <div className="mb-4 p-3 border-4 border-black bg-stone-100">
+              <p className="text-xs font-semibold">{accessCodeError}</p>
+            </div>
+          )}
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={accessCodeInput}
+              onChange={(e) => setAccessCodeInput(e.target.value)}
+              placeholder="Enter access code"
+              className="input w-full text-center font-mono tracking-widest text-lg"
+              maxLength={16}
+              onKeyDown={(e) => e.key === "Enter" && handleVerifyAccessCode()}
+            />
+            <button
+              onClick={handleVerifyAccessCode}
+              disabled={!accessCodeInput.trim()}
+              className="btn w-full"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (delegated) {
+    return (
+      <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
+        <div className="card max-w-lg w-full shadow-brutal text-center">
+          <h1 className="text-2xl font-bold tracking-tighter uppercase mb-6">Signing Delegated</h1>
+          <div className="p-5 border-4 border-blue-400 bg-blue-50 mb-6">
+            <p className="font-black uppercase text-blue-800 mb-1">Delegation Successful</p>
+            <p className="text-sm text-blue-700">
+              This document has been forwarded to <strong>{delegateEmail}</strong>. They will receive an email with their signing link.
+            </p>
+          </div>
+          <p className="text-xs text-stone-400 font-mono">You may close this window.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (completed) {
     return (
       <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
-        <div className="card max-w-lg w-full text-center shadow-brutal">
-          <h1 className="text-2xl font-bold tracking-tighter uppercase mb-4">
-            Signature Complete
-          </h1>
-          <p className="text-stone-600 mb-2">
-            You have successfully signed the document.
-          </p>
-          <p className="font-semibold text-lg">{context?.documentTitle}</p>
-          <div className="mt-6 p-4 bg-green-100 border-4 border-green-400">
-            <p className="font-semibold uppercase text-green-800 text-sm">
-              Document signed successfully
+        <div className="card max-w-lg w-full shadow-brutal">
+          {!isEmbed && (
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold tracking-tighter uppercase">Traza</h1>
+              <p className="text-xs text-stone-500 font-mono mt-1">E-SIGNATURE PLATFORM</p>
+            </div>
+          )}
+
+          <div className={`p-5 border-4 mb-6 ${documentCompleted ? "bg-green-50 border-green-500" : "bg-yellow-50 border-yellow-400"}`}>
+            <p className={`font-black uppercase text-lg mb-1 ${documentCompleted ? "text-green-800" : "text-yellow-800"}`}>
+              {documentCompleted ? "All Done!" : "Your Signature Received"}
+            </p>
+            <p className={`text-sm ${documentCompleted ? "text-green-700" : "text-yellow-700"}`}>
+              {documentCompleted
+                ? "Every signer has completed their signature. The document is fully executed."
+                : "Your signature has been recorded. Other signers will be notified when it's their turn."}
             </p>
           </div>
+
+          <div className="space-y-3 text-sm mb-6">
+            <div className="flex justify-between items-center py-2 border-b-2 border-stone-100">
+              <span className="text-stone-500 font-mono uppercase text-xs">Document</span>
+              <span className="font-semibold text-right max-w-[60%]">{context?.documentTitle}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b-2 border-stone-100">
+              <span className="text-stone-500 font-mono uppercase text-xs">Signed As</span>
+              <span className="font-mono text-xs">{context?.signerName} &lt;{context?.signerEmail}&gt;</span>
+            </div>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-stone-500 font-mono uppercase text-xs">Timestamp</span>
+              <span className="font-mono text-xs">{new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-stone-400 font-mono text-center">
+            A cryptographic record of your signature has been saved.
+            {documentCompleted && " You may close this window."}
+          </p>
         </div>
       </div>
     );
@@ -320,12 +478,31 @@ export default function PublicSigningPage() {
   if (declined) {
     return (
       <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
-        <div className="card max-w-lg w-full text-center shadow-brutal">
-          <h1 className="text-2xl font-bold tracking-tighter uppercase mb-4">
-            Signing Declined
-          </h1>
-          <p className="text-stone-600">
-            You have declined to sign this document.
+        <div className="card max-w-lg w-full shadow-brutal">
+          {!isEmbed && (
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold tracking-tighter uppercase">Traza</h1>
+              <p className="text-xs text-stone-500 font-mono mt-1">E-SIGNATURE PLATFORM</p>
+            </div>
+          )}
+
+          <div className="p-5 border-4 border-stone-400 bg-stone-50 mb-6">
+            <p className="font-black uppercase text-lg mb-1 text-stone-700">Signing Declined</p>
+            <p className="text-sm text-stone-600">
+              You have declined to sign &ldquo;{context?.documentTitle}&rdquo;.
+              The document sender has been notified.
+            </p>
+          </div>
+
+          {declineReason && (
+            <div className="mb-6 p-4 bg-stone-100 border-2 border-stone-300">
+              <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">Your Reason</p>
+              <p className="text-sm text-stone-700 italic">&ldquo;{declineReason}&rdquo;</p>
+            </div>
+          )}
+
+          <p className="text-xs text-stone-400 font-mono text-center">
+            No further action is required. You may close this window.
           </p>
         </div>
       </div>
@@ -334,24 +511,86 @@ export default function PublicSigningPage() {
 
   // New field-based signing flow
   if (fields && fields.length > 0 && pdfUrl && context) {
+    // Show decline/delegate modal overlays
+    const DeclineOverlay = showDeclineForm && (
+      <div className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/40">
+        <div className="bg-white border-4 border-black p-6 w-full max-w-lg space-y-3 shadow-brutal">
+          <p className="text-sm font-semibold uppercase tracking-wide">Reason for declining (optional)</p>
+          <textarea
+            value={declineReason}
+            onChange={(e) => setDeclineReason(e.target.value)}
+            className="input w-full h-24 resize-none text-sm"
+            placeholder="Let the sender know why you're declining..."
+            autoFocus
+          />
+          <div className="flex gap-3">
+            <button onClick={handleDecline} disabled={submitting}
+              className="px-4 py-2 bg-black text-white text-sm font-bold uppercase hover:bg-stone-800 transition-colors disabled:opacity-50">
+              {submitting ? "Submitting..." : "Confirm Decline"}
+            </button>
+            <button onClick={() => setShowDeclineForm(false)} disabled={submitting}
+              className="px-4 py-2 border-2 border-stone-300 text-sm font-bold uppercase hover:border-black transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+
+    const DelegateOverlay = showDelegateForm && (
+      <div className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/40">
+        <div className="bg-white border-4 border-black p-6 w-full max-w-lg space-y-3 shadow-brutal">
+          <p className="text-sm font-semibold uppercase tracking-wide">Delegate to someone else</p>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="text"
+              value={delegateName}
+              onChange={(e) => setDelegateName(e.target.value)}
+              placeholder="Full name"
+              className="input text-sm"
+              autoFocus
+            />
+            <input
+              type="email"
+              value={delegateEmail}
+              onChange={(e) => setDelegateEmail(e.target.value)}
+              placeholder="Email address"
+              className="input text-sm"
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={handleDelegate}
+              disabled={delegating || !delegateEmail.trim() || !delegateName.trim()}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-bold uppercase hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {delegating ? "Delegating..." : "Send to Them"}
+            </button>
+            <button onClick={() => setShowDelegateForm(false)}
+              className="px-4 py-2 border-2 border-stone-300 text-sm font-bold uppercase hover:border-black transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+
     return (
       <div className="min-h-screen bg-stone-100">
-        {/* Document info header */}
-        <div className="bg-white border-b-4 border-black">
+        {/* Branding header */}
+        <div className="bg-white border-b-4" style={{ borderColor: branding.primaryColor ?? "#000" }}>
           <div className="max-w-4xl mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  DOCUMENT
-                </p>
-                <p className="font-semibold text-sm">
-                  {context.documentTitle}
-                </p>
+            <div className="flex items-center gap-3 min-w-0">
+              {branding.logoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={branding.logoUrl} alt="logo" className="h-7 object-contain flex-shrink-0" />
+              )}
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">DOCUMENT</p>
+                <p className="font-semibold text-sm truncate">{context.documentTitle}</p>
               </div>
-              <div className="text-right">
-                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  SIGNER
-                </p>
+              <div className="ml-auto text-right hidden sm:block flex-shrink-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">SIGNER</p>
                 <p className="font-mono text-xs">{context.signerEmail}</p>
               </div>
             </div>
@@ -363,20 +602,12 @@ export default function PublicSigningPage() {
           pdfUrl={pdfUrl}
           fields={fields}
           signerEmail={context.signerEmail}
+          onDecline={() => setShowDeclineForm(true)}
+          onDelegate={() => setShowDelegateForm(true)}
         />
 
-        {/* Decline button */}
-        <div className="bg-white border-t-4 border-black">
-          <div className="max-w-4xl mx-auto px-4 py-3 text-center">
-            <button
-              onClick={handleDecline}
-              disabled={submitting}
-              className="text-xs font-bold uppercase tracking-wide text-stone-500 hover:text-black transition-colors underline"
-            >
-              {submitting ? "PROCESSING..." : "DECLINE TO SIGN"}
-            </button>
-          </div>
-        </div>
+        {DeclineOverlay}
+        {DelegateOverlay}
       </div>
     );
   }
@@ -385,15 +616,16 @@ export default function PublicSigningPage() {
   return (
     <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
       <div className="max-w-lg w-full space-y-6">
-        {/* Header */}
-        <div className="card shadow-brutal">
+        {/* Header card with branding */}
+        <div className="card shadow-brutal" style={{ borderColor: branding.primaryColor ?? undefined }}>
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold tracking-tighter uppercase">
-              Traza
-            </h1>
-            <p className="text-xs text-stone-500 font-mono mt-1">
-              E-SIGNATURE REQUEST
-            </p>
+            {branding.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={branding.logoUrl} alt="logo" className="h-10 object-contain mx-auto mb-3" />
+            ) : (
+              <h1 className="text-2xl font-bold tracking-tighter uppercase">Traza</h1>
+            )}
+            <p className="text-xs text-stone-500 font-mono mt-1">E-SIGNATURE REQUEST</p>
           </div>
 
           <div className="space-y-4">
@@ -401,9 +633,7 @@ export default function PublicSigningPage() {
               <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">
                 Document
               </p>
-              <p className="font-semibold text-lg">
-                {context?.documentTitle}
-              </p>
+              <p className="font-semibold text-lg">{context?.documentTitle}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -411,9 +641,7 @@ export default function PublicSigningPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">
                   Signer
                 </p>
-                <p className="font-semibold text-sm">
-                  {context?.signerName}
-                </p>
+                <p className="font-semibold text-sm">{context?.signerName}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">
@@ -455,14 +683,92 @@ export default function PublicSigningPage() {
           </div>
         )}
 
-        {/* Decline */}
-        <button
-          onClick={handleDecline}
-          disabled={submitting}
-          className="btn-secondary w-full"
-        >
-          {submitting ? "Processing..." : "Decline to Sign"}
-        </button>
+        {/* Decline form */}
+        {showDeclineForm && (
+          <div className="card space-y-3">
+            <p className="text-sm font-semibold uppercase tracking-wide">Reason for declining (optional)</p>
+            <textarea
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+              className="input w-full h-20 resize-none text-sm"
+              placeholder="Let the sender know why you're declining..."
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleDecline}
+                disabled={submitting}
+                className="flex-1 px-4 py-2 bg-black text-white text-sm font-bold uppercase hover:bg-stone-800 transition-colors disabled:opacity-50"
+              >
+                {submitting ? "Submitting..." : "Confirm Decline"}
+              </button>
+              <button
+                onClick={() => setShowDeclineForm(false)}
+                disabled={submitting}
+                className="px-4 py-2 border-2 border-stone-300 text-sm font-bold uppercase hover:border-black transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Delegate form */}
+        {showDelegateForm && !showDeclineForm && (
+          <div className="card space-y-3">
+            <p className="text-sm font-semibold uppercase tracking-wide">Delegate to someone else</p>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                value={delegateName}
+                onChange={(e) => setDelegateName(e.target.value)}
+                placeholder="Full name"
+                className="input text-sm"
+              />
+              <input
+                type="email"
+                value={delegateEmail}
+                onChange={(e) => setDelegateEmail(e.target.value)}
+                placeholder="Email address"
+                className="input text-sm"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleDelegate}
+                disabled={delegating || !delegateEmail.trim() || !delegateName.trim()}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-bold uppercase hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {delegating ? "Delegating..." : "Send to Them"}
+              </button>
+              <button
+                onClick={() => setShowDelegateForm(false)}
+                className="px-4 py-2 border-2 border-stone-300 text-sm font-bold uppercase hover:border-black transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Action links */}
+        {!showDeclineForm && !showDelegateForm && (
+          <div className="flex items-center justify-center gap-6">
+            <button
+              onClick={() => setShowDeclineForm(true)}
+              disabled={submitting}
+              className="text-xs font-bold uppercase tracking-wide text-stone-500 hover:text-black transition-colors underline"
+            >
+              Decline to Sign
+            </button>
+            <span className="text-stone-300">|</span>
+            <button
+              onClick={() => setShowDelegateForm(true)}
+              className="text-xs font-bold uppercase tracking-wide text-blue-500 hover:text-blue-700 transition-colors underline"
+            >
+              Delegate to Someone Else
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

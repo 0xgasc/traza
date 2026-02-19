@@ -8,10 +8,12 @@ import { sendReminderEmail, sendExpirationNoticeEmail } from '../services/email.
  *  - Sends reminder emails to pending signers whose documents expire within 48 hours
  *    (one reminder per signer, tracked via reminderSentAt)
  *  - Marks expired PENDING documents as EXPIRED
+ *  - Notifies document owners of documents expiring within 48 hours
+ *    (one notification per document, tracked via audit log)
  */
 
 export async function processRemindersAndExpirations() {
-  await Promise.all([sendReminders(), expireDocuments()]);
+  await Promise.all([sendReminders(), expireDocuments(), notifyOwnerOfExpiry()]);
 }
 
 async function sendReminders() {
@@ -133,6 +135,58 @@ async function expireDocuments() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       logger.error(`Failed to expire document`, { documentId: doc.id, error: msg });
+    }
+  }
+}
+
+async function notifyOwnerOfExpiry() {
+  const now = new Date();
+  const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+  // Find PENDING documents expiring within 48h
+  const expiringDocs = await prisma.document.findMany({
+    where: {
+      status: 'PENDING',
+      expiresAt: { lte: in48h, gt: now },
+    },
+    include: {
+      owner: { select: { email: true, name: true } },
+      auditLogs: {
+        where: { eventType: 'document.owner_expiry_warning' },
+        take: 1,
+      },
+    },
+    take: 50,
+  });
+
+  for (const doc of expiringDocs) {
+    // Skip if already notified
+    if (doc.auditLogs.length > 0) continue;
+    if (!doc.owner?.email) continue;
+
+    const hoursLeft = Math.round((doc.expiresAt!.getTime() - now.getTime()) / (1000 * 60 * 60));
+
+    try {
+      await sendReminderEmail({
+        to: doc.owner.email,
+        recipientName: doc.owner.name ?? 'there',
+        senderName: 'Traza',
+        documentTitle: doc.title,
+        signingUrl: `${process.env.APP_URL ?? 'http://localhost:3000'}/documents/${doc.id}`,
+        expiresAt: doc.expiresAt!,
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          documentId: doc.id,
+          eventType: 'document.owner_expiry_warning',
+          metadata: { hoursLeft, sentTo: doc.owner.email },
+        },
+      });
+
+      logger.info('Owner expiry warning sent', { documentId: doc.id, to: doc.owner.email, hoursLeft });
+    } catch (err) {
+      logger.warn('Failed to send owner expiry warning', { documentId: doc.id, error: (err as Error).message });
     }
   }
 }

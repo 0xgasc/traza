@@ -8,7 +8,9 @@ import { apiGet, apiPost } from "@/lib/api";
 interface Signer {
   email: string;
   name: string;
+  order: number;
   fieldCount?: number;
+  accessCode?: string;
 }
 
 interface FieldData {
@@ -24,41 +26,39 @@ export default function SendForSigningPage() {
 
   const [signers, setSigners] = useState<Signer[]>([]);
   const [message, setMessage] = useState("");
-  const [expirationDays, setExpirationDays] = useState("7");
+  const [expiresInDays, setExpiresInDays] = useState("7");
+  const [sequential, setSequential] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [ccRecipients, setCcRecipients] = useState<Array<{email: string; name: string}>>([]);
 
-  // Fetch fields and derive signers on mount
   useEffect(() => {
     async function fetchSigners() {
       try {
-        const fields = await apiGet<FieldData[]>('/api/v1/documents/' + id + '/fields');
+        const fields = await apiGet<FieldData[]>("/api/v1/documents/" + id + "/fields");
 
-        // Extract unique signers from fields
         const signerMap = new Map<string, { email: string; count: number }>();
         for (const field of fields) {
           if (field.signerEmail) {
             const existing = signerMap.get(field.signerEmail);
-            if (existing) {
-              existing.count++;
-            } else {
-              signerMap.set(field.signerEmail, { email: field.signerEmail, count: 1 });
-            }
+            if (existing) existing.count++;
+            else signerMap.set(field.signerEmail, { email: field.signerEmail, count: 1 });
           }
         }
 
-        // Convert to array with default names from email
-        const signerList: Signer[] = Array.from(signerMap.values()).map(s => ({
+        const signerList: Signer[] = Array.from(signerMap.values()).map((s, i) => ({
           email: s.email,
-          name: s.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          name:
+            s.email.split("@")[0]?.replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) ??
+            s.email,
+          order: i + 1,
           fieldCount: s.count,
         }));
 
-        setSigners(signerList.length > 0 ? signerList : [{ email: "", name: "" }]);
-      } catch (err) {
-        // If fields fetch fails, start with empty signer
-        setSigners([{ email: "", name: "" }]);
+        setSigners(signerList.length > 0 ? signerList : [{ email: "", name: "", order: 1 }]);
+      } catch {
+        setSigners([{ email: "", name: "", order: 1 }]);
       } finally {
         setLoading(false);
       }
@@ -68,17 +68,41 @@ export default function SendForSigningPage() {
   }, [id]);
 
   const addSigner = () => {
-    setSigners([...signers, { email: "", name: "" }]);
+    setSigners([...signers, { email: "", name: "", order: signers.length + 1 }]);
   };
 
   const removeSigner = (index: number) => {
     if (signers.length === 1) return;
-    setSigners(signers.filter((_, i) => i !== index));
+    setSigners(
+      signers
+        .filter((_, i) => i !== index)
+        .map((s, i) => ({ ...s, order: i + 1 })),
+    );
   };
 
-  const updateSigner = (index: number, field: keyof Signer, value: string) => {
+  const updateSigner = (index: number, field: keyof Signer, value: string | number) => {
     const updated = [...signers];
-    updated[index] = { ...updated[index], [field]: value };
+    updated[index] = { ...updated[index]!, [field]: value };
+    setSigners(updated);
+  };
+
+  const moveUp = (index: number) => {
+    if (index === 0) return;
+    const updated = [...signers];
+    const a = updated[index - 1]!.order;
+    const b = updated[index]!.order;
+    updated[index - 1] = { ...updated[index - 1]!, order: b };
+    updated[index] = { ...updated[index]!, order: a };
+    setSigners(updated);
+  };
+
+  const moveDown = (index: number) => {
+    if (index === signers.length - 1) return;
+    const updated = [...signers];
+    const a = updated[index]!.order;
+    const b = updated[index + 1]!.order;
+    updated[index] = { ...updated[index]!, order: b };
+    updated[index + 1] = { ...updated[index + 1]!, order: a };
     setSigners(updated);
   };
 
@@ -87,9 +111,7 @@ export default function SendForSigningPage() {
     setError("");
     setSending(true);
 
-    const validSigners = signers.filter(
-      (s) => s.email.trim() && s.name.trim()
-    );
+    const validSigners = signers.filter((s) => s.email.trim() && s.name.trim());
 
     if (validSigners.length === 0) {
       setError("At least one signer with name and email is required.");
@@ -99,10 +121,19 @@ export default function SendForSigningPage() {
 
     try {
       await apiPost("/api/v1/documents/" + id + "/send", {
-        signers: validSigners.map(s => ({ email: s.email, name: s.name })),
+        signers: validSigners.map((s) => ({
+          email: s.email.trim(),
+          name: s.name.trim(),
+          order: sequential ? s.order : 1,
+          accessCode: s.accessCode?.trim() || undefined,
+        })),
         message: message.trim() || undefined,
-        expirationDays: parseInt(expirationDays, 10),
+        expiresInDays: parseInt(expiresInDays, 10),
       });
+      const validCc = ccRecipients.filter((cc) => cc.email.trim() && cc.name.trim());
+      if (validCc.length > 0) {
+        await apiPost("/api/v1/documents/" + id + "/recipients", { recipients: validCc });
+      }
       router.push("/documents/" + id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to send";
@@ -112,9 +143,9 @@ export default function SendForSigningPage() {
     }
   };
 
-  const cancelHref = "/documents/" + id;
-  const prepareHref = "/documents/" + id + "/prepare";
-  const hasFieldSigners = signers.some(s => s.fieldCount && s.fieldCount > 0);
+  const hasFieldSigners = signers.some((s) => s.fieldCount && s.fieldCount > 0);
+  const validCount = signers.filter((s) => s.email && s.name).length;
+  const displaySigners = sequential ? [...signers].sort((a, b) => a.order - b.order) : signers;
 
   if (loading) {
     return (
@@ -130,26 +161,23 @@ export default function SendForSigningPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tighter uppercase">
-            Send for Signing
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tighter uppercase">Send for Signing</h1>
           <p className="text-sm text-stone-500 font-mono mt-1">
             {hasFieldSigners ? "SIGNERS FROM PREPARED FIELDS" : "ADD SIGNERS AND SEND"}
           </p>
         </div>
-        <Link href={cancelHref} className="btn-secondary">
+        <Link href={"/documents/" + id} className="btn-secondary">
           Cancel
         </Link>
       </div>
 
       {!hasFieldSigners && (
         <div className="mb-6 p-4 border-4 border-yellow-400 bg-yellow-50 max-w-2xl">
-          <p className="text-sm font-semibold mb-2">No fields placed yet</p>
+          <p className="text-sm font-semibold mb-1">No fields placed yet</p>
           <p className="text-sm text-stone-600 mb-3">
-            For the best experience, place signature fields on the document first.
-            This lets signers know exactly where to sign.
+            Place signature fields on the document first so signers know exactly where to sign.
           </p>
-          <Link href={prepareHref} className="text-sm font-bold underline">
+          <Link href={"/documents/" + id + "/prepare"} className="text-sm font-bold underline">
             Go to Prepare Document →
           </Link>
         </div>
@@ -162,57 +190,112 @@ export default function SendForSigningPage() {
       )}
 
       <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
+        {/* Signers */}
         <div>
-          <label className="block text-sm font-semibold uppercase tracking-wide mb-3">
-            Signers
-          </label>
-          <div className="space-y-3">
-            {signers.map((signer, index) => (
-              <div key={index} className="flex gap-3 items-start">
-                <input
-                  type="text"
-                  value={signer.name}
-                  onChange={(e) => updateSigner(index, "name", e.target.value)}
-                  placeholder="Name"
-                  className="input flex-1"
-                  required
-                />
-                <input
-                  type="email"
-                  value={signer.email}
-                  onChange={(e) => updateSigner(index, "email", e.target.value)}
-                  placeholder="Email"
-                  className="input flex-1"
-                  required
-                  disabled={!!signer.fieldCount} // Can't change email if fields exist
-                />
-                {signer.fieldCount ? (
-                  <span className="px-3 py-3 text-xs font-bold text-stone-400 uppercase">
-                    {signer.fieldCount} field{signer.fieldCount !== 1 ? 's' : ''}
-                  </span>
-                ) : signers.length > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => removeSigner(index)}
-                    className="px-3 py-3 border-3 border-black font-bold hover:bg-black hover:text-white transition-colors"
-                  >
-                    X
-                  </button>
-                ) : null}
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm font-semibold uppercase tracking-wide">Signers</label>
+            {signers.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setSequential(!sequential)}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wide border-2 transition-colors ${
+                  sequential ? "bg-black text-white border-black" : "bg-white text-black border-stone-300 hover:border-black"
+                }`}
+              >
+                {sequential ? "Sequential ✓" : "Sequential"}
+              </button>
+            )}
           </div>
+
+          {sequential && (
+            <p className="mb-3 text-xs font-mono text-stone-500 bg-stone-50 border-2 border-stone-200 px-3 py-2">
+              Signers will be notified one step at a time in the order shown. Use ▲▼ to reorder.
+            </p>
+          )}
+
+          <div className="space-y-2">
+            {displaySigners.map((signer, displayIndex) => {
+              const originalIndex = signers.findIndex((s) => s === signer);
+              return (
+                <div key={originalIndex} className="flex gap-2 items-center">
+                  {sequential && (
+                    <div className="flex flex-col gap-0.5 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => moveUp(displayIndex)}
+                        disabled={displayIndex === 0}
+                        className="w-7 h-5 text-xs border border-stone-300 hover:border-black hover:bg-black hover:text-white transition-colors disabled:opacity-20 flex items-center justify-center"
+                      >
+                        ▲
+                      </button>
+                      <div className="w-7 h-7 flex items-center justify-center text-xs font-bold font-mono bg-black text-white">
+                        {signer.order}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => moveDown(displayIndex)}
+                        disabled={displayIndex === displaySigners.length - 1}
+                        className="w-7 h-5 text-xs border border-stone-300 hover:border-black hover:bg-black hover:text-white transition-colors disabled:opacity-20 flex items-center justify-center"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  )}
+                  <input
+                    type="text"
+                    value={signer.name}
+                    onChange={(e) => updateSigner(originalIndex, "name", e.target.value)}
+                    placeholder="Full name"
+                    className="input flex-1"
+                    required
+                  />
+                  <input
+                    type="email"
+                    value={signer.email}
+                    onChange={(e) => updateSigner(originalIndex, "email", e.target.value)}
+                    placeholder="Email address"
+                    className="input flex-1"
+                    required
+                    disabled={!!signer.fieldCount}
+                  />
+                  <input
+                    type="text"
+                    value={signer.accessCode ?? ""}
+                    onChange={(e) => updateSigner(originalIndex, "accessCode", e.target.value)}
+                    placeholder="PIN (optional)"
+                    className="input w-24 flex-shrink-0"
+                    maxLength={16}
+                  />
+                  {signer.fieldCount ? (
+                    <span className="text-xs font-bold text-stone-400 uppercase w-8 text-center flex-shrink-0">
+                      {signer.fieldCount}f
+                    </span>
+                  ) : signers.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => removeSigner(originalIndex)}
+                      className="w-8 h-10 border-2 border-black font-bold hover:bg-black hover:text-white transition-colors flex-shrink-0 flex items-center justify-center"
+                    >
+                      ×
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+
           {!hasFieldSigners && (
             <button
               type="button"
               onClick={addSigner}
-              className="mt-3 px-4 py-2 border-3 border-black text-sm font-semibold uppercase hover:bg-black hover:text-white transition-colors"
+              className="mt-3 px-4 py-2 border-2 border-black text-sm font-semibold uppercase hover:bg-black hover:text-white transition-colors"
             >
               + Add Signer
             </button>
           )}
         </div>
 
+        {/* Message */}
         <div>
           <label className="block text-sm font-semibold uppercase tracking-wide mb-2">
             Message (Optional)
@@ -220,22 +303,23 @@ export default function SendForSigningPage() {
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="input w-full h-32 resize-none"
-            placeholder="Add a message for the signers..."
+            className="input w-full h-28 resize-none"
+            placeholder="Add a personal message for the signers..."
           />
         </div>
 
+        {/* Expiration */}
         <div>
           <label className="block text-sm font-semibold uppercase tracking-wide mb-2">
             Expiration
           </label>
           <select
-            value={expirationDays}
-            onChange={(e) => setExpirationDays(e.target.value)}
+            value={expiresInDays}
+            onChange={(e) => setExpiresInDays(e.target.value)}
             className="input"
           >
             <option value="3">3 Days</option>
-            <option value="7">7 Days</option>
+            <option value="7">7 Days (default)</option>
             <option value="14">14 Days</option>
             <option value="30">30 Days</option>
             <option value="60">60 Days</option>
@@ -243,8 +327,60 @@ export default function SendForSigningPage() {
           </select>
         </div>
 
+        {/* CC Recipients */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm font-semibold uppercase tracking-wide">CC Recipients</label>
+            <button
+              type="button"
+              onClick={() => setCcRecipients([...ccRecipients, { email: "", name: "" }])}
+              className="text-xs font-bold underline uppercase tracking-wide text-stone-500 hover:text-black"
+            >
+              + Add CC
+            </button>
+          </div>
+          {ccRecipients.length > 0 && (
+            <div className="space-y-2">
+              {ccRecipients.map((cc, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={cc.name}
+                    onChange={(e) => {
+                      const updated = [...ccRecipients];
+                      updated[i] = { ...updated[i]!, name: e.target.value };
+                      setCcRecipients(updated);
+                    }}
+                    placeholder="Full name"
+                    className="input flex-1"
+                  />
+                  <input
+                    type="email"
+                    value={cc.email}
+                    onChange={(e) => {
+                      const updated = [...ccRecipients];
+                      updated[i] = { ...updated[i]!, email: e.target.value };
+                      setCcRecipients(updated);
+                    }}
+                    placeholder="Email (receives copy when complete)"
+                    className="input flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCcRecipients(ccRecipients.filter((_, idx) => idx !== i))}
+                    className="w-8 h-10 border-2 border-black font-bold hover:bg-black hover:text-white transition-colors flex-shrink-0 flex items-center justify-center"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <p className="text-xs font-mono text-stone-400 mt-1">CC recipients receive a copy when all signers complete. They do not sign.</p>
+            </div>
+          )}
+        </div>
+
         <button type="submit" disabled={sending} className="btn w-full">
-          {sending ? "Sending..." : "Send for Signing"}
+          {sending ? "Sending..." : `Send to ${validCount} Signer${validCount !== 1 ? "s" : ""}${sequential && validCount > 1 ? " (Sequential)" : ""}`}
         </button>
       </form>
     </div>

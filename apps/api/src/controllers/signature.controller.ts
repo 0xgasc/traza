@@ -64,3 +64,16 @@ export async function getDocumentSignatures(req: Request, res: Response, next: N
     next(err);
   }
 }
+
+export async function remindSigner(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await signatureService.remindSigner(
+      req.params.id as string,
+      req.params.signatureId as string,
+      req.user!.userId,
+    );
+    success(res, result);
+  } catch (err) {
+    next(err);
+  }
+}

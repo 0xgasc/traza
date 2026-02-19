@@ -6,6 +6,7 @@ import { DocumentCompleted } from '../emails/DocumentCompleted.js';
 import { Reminder } from '../emails/Reminder.js';
 import { ExpirationNotice } from '../emails/ExpirationNotice.js';
 import { OrgInvitation } from '../emails/OrgInvitation.js';
+import { SignatureDeclined } from '../emails/SignatureDeclined.js';
 
 let resend: Resend | null = null;
 
@@ -138,6 +139,35 @@ export async function sendExpirationNoticeEmail(params: {
   await sendEmail(
     params.to,
     `Signing link for "${params.documentTitle}" has expired`,
+    html,
+  );
+}
+
+export async function sendSignatureDeclinedEmail(params: {
+  to: string;
+  recipientName: string;
+  documentTitle: string;
+  signerName: string;
+  signerEmail: string;
+  declinedAt: Date;
+  reason?: string;
+  documentUrl: string;
+}) {
+  const html = await render(
+    SignatureDeclined({
+      recipientName: params.recipientName,
+      documentTitle: params.documentTitle,
+      signerName: params.signerName,
+      signerEmail: params.signerEmail,
+      declinedAt: params.declinedAt,
+      reason: params.reason,
+      documentUrl: params.documentUrl,
+    }),
+  );
+
+  await sendEmail(
+    params.to,
+    `${params.signerName} declined to sign "${params.documentTitle}"`,
     html,
   );
 }

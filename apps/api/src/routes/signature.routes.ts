@@ -29,6 +29,12 @@ router.get(
   signatureController.getDocumentSignatures,
 );
 
+router.post(
+  '/documents/:id/signatures/:signatureId/remind',
+  requireAuth,
+  signatureController.remindSigner,
+);
+
 // Public routes (signer with token)
 router.get('/sign/:token', signatureController.getSigningContext);
 
@@ -91,5 +97,44 @@ router.post(
   validate(declineSignatureSchema),
   signatureController.declineSignature,
 );
+
+router.post('/sign/:token/access', async (req, res, next) => {
+  try {
+    const { verifyAccessCode } = await import('../services/signature.service.js');
+    const result = await verifyAccessCode(req.params.token!, req.body.code ?? '');
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+// Signer delegation: reassign to a different person
+router.post('/sign/:token/delegate', async (req, res, next) => {
+  try {
+    const { email, name } = req.body;
+    if (!email?.trim() || !name?.trim()) {
+      return res.status(400).json({ error: { code: 'VALIDATION', message: 'email and name are required' } });
+    }
+    const { delegateSignature } = await import('../services/signature.service.js');
+    const result = await delegateSignature(req.params.token!, email.trim().toLowerCase(), name.trim());
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+// Get document owner branding for signing page (public)
+router.get('/sign/:token/branding', async (req, res, next) => {
+  try {
+    const { verifySigningToken } = await import('../utils/signingToken.js');
+    const payload = verifySigningToken(req.params.token!);
+    const doc = await prisma.document.findUnique({
+      where: { id: payload.documentId },
+      include: { owner: { select: { brandingLogoUrl: true, brandingColor: true, name: true } } },
+    });
+    const branding = (doc?.owner as { brandingLogoUrl?: string; brandingColor?: string; name?: string } | null) ?? {};
+    res.json({
+      logoUrl: branding.brandingLogoUrl ?? null,
+      primaryColor: branding.brandingColor ?? null,
+      ownerName: branding.name ?? null,
+    });
+  } catch (err) { next(err); }
+});
 
 export default router;

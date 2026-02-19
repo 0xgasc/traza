@@ -18,6 +18,8 @@ import webhookRoutes from './routes/webhook.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import organizationRoutes from './routes/organization.routes.js';
 import gdprRoutes from './routes/gdpr.routes.js';
+import templateRoutes from './routes/template.routes.js';
+import tagRoutes from './routes/tag.routes.js';
 import { sanitizeInput } from './middleware/sanitize.middleware.js';
 import * as extraController from './controllers/document.extra.controller.js';
 
@@ -127,6 +129,8 @@ app.use('/api/v1/documents', documentRoutes);
 app.use('/api/v1', signatureRoutes);
 app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/organizations', organizationRoutes);
+app.use('/api/v1/templates', templateRoutes);
+app.use('/api/v1/tags', tagRoutes);
 
 // Admin routes (super admin only)
 app.use('/api/v1/admin', adminRoutes);

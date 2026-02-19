@@ -32,11 +32,16 @@ export async function listDocuments(req: Request, res: Response, next: NextFunct
     const status = req.query.status as DocumentStatus | undefined;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
+    const search = (req.query.search as string) || undefined;
+
+    const tagId = (req.query.tagId as string) || undefined;
 
     const result = await documentService.listDocuments(req.user!.userId, {
       status,
       page,
       limit,
+      search,
+      tagId,
     });
 
     paginated(res, result.documents, result.total, result.page, result.limit);
@@ -80,6 +85,15 @@ export async function deleteDocument(req: Request, res: Response, next: NextFunc
   try {
     await documentService.deleteDocument(req.params.id as string, req.user!.userId);
     res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function resendDocument(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await documentService.resendDocument(req.params.id as string, req.user!.userId);
+    success(res, result);
   } catch (err) {
     next(err);
   }

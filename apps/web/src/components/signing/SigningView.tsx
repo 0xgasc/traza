@@ -23,6 +23,8 @@ interface SigningViewProps {
   pdfUrl: string;
   fields: FieldPosition[];
   signerEmail: string;
+  onDecline?: () => void;
+  onDelegate?: () => void;
 }
 
 export default function SigningView({
@@ -30,6 +32,8 @@ export default function SigningView({
   pdfUrl,
   fields,
   signerEmail,
+  onDecline,
+  onDelegate,
 }: SigningViewProps) {
   const {
     values,
@@ -277,12 +281,33 @@ export default function SigningView({
       {/* Bottom action bar */}
       <div className="sticky bottom-0 z-40 bg-white border-t-4 border-black">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          {/* Decline / Delegate links */}
+          <div className="flex items-center gap-4 flex-shrink-0">
+            {onDecline && (
+              <button
+                onClick={onDecline}
+                className="text-xs font-bold uppercase tracking-wide text-stone-400 hover:text-black transition-colors underline"
+              >
+                Decline
+              </button>
+            )}
+            {onDelegate && (
+              <button
+                onClick={onDelegate}
+                className="text-xs font-bold uppercase tracking-wide text-blue-400 hover:text-blue-700 transition-colors underline"
+              >
+                Delegate
+              </button>
+            )}
+          </div>
+
           {error && (
-            <div className="flex-1 p-2 border-3 border-black bg-stone-100">
+            <div className="flex-1 p-2 border-2 border-black bg-stone-100">
               <p className="text-xs font-semibold text-red-600">{error}</p>
             </div>
           )}
-          <div className="flex-1" />
+          {!error && <div className="flex-1" />}
+
           {/* Next Field navigation button */}
           {unfilledRequired.length > 0 && (
             <button

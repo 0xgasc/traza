@@ -59,7 +59,7 @@ interface UseFieldPlacementReturn {
   lastSavedAt: Date | null;
 }
 
-export function useFieldPlacement(documentId: string): UseFieldPlacementReturn {
+export function useFieldPlacement(documentId: string, fieldsEndpoint?: string): UseFieldPlacementReturn {
   const [fields, setFields] = useState<FieldPosition[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -71,7 +71,7 @@ export function useFieldPlacement(documentId: string): UseFieldPlacementReturn {
     setLoading(true);
     try {
       const data = await apiGet<FieldPosition[]>(
-        `/api/v1/documents/${documentId}/fields`
+        `${fieldsEndpoint ?? `/api/v1/documents/${documentId}/fields`}`
       );
       const mapped: FieldPosition[] = (data || []).map((f: FieldPosition) => ({
         id: f.id,
@@ -95,7 +95,7 @@ export function useFieldPlacement(documentId: string): UseFieldPlacementReturn {
     } finally {
       setLoading(false);
     }
-  }, [documentId]);
+  }, [documentId, fieldsEndpoint]);
 
   const addField = useCallback(
     (fieldType: string, page: number, signerEmail: string, signerName?: string) => {
@@ -136,7 +136,7 @@ export function useFieldPlacement(documentId: string): UseFieldPlacementReturn {
   const save = useCallback(async () => {
     setSaving(true);
     try {
-      await apiPut(`/api/v1/documents/${documentId}/fields`, { fields });
+      await apiPut(`${fieldsEndpoint ?? `/api/v1/documents/${documentId}/fields`}`, { fields });
       setIsDirty(false);
       setLastSavedAt(new Date());
     } catch (err) {
@@ -145,7 +145,7 @@ export function useFieldPlacement(documentId: string): UseFieldPlacementReturn {
     } finally {
       setSaving(false);
     }
-  }, [documentId, fields]);
+  }, [documentId, fieldsEndpoint, fields]);
 
   // Debounced auto-save: when isDirty becomes true, wait 3 seconds then save.
   // Resets the timer on every change to fields. Cleans up on unmount.

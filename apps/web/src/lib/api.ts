@@ -110,8 +110,15 @@ async function request<T = unknown>(
   if (!res.ok) {
     let errorMessage = `Request failed with status ${res.status}`;
     try {
-      const errorData: ApiError = await res.json();
-      errorMessage = errorData.message || errorMessage;
+      const errorData = await res.json();
+      // API returns { error: { message, details } } shape
+      const nested = errorData?.error;
+      if (nested?.details?.length) {
+        // Use first Zod issue's message for validation errors
+        errorMessage = nested.details[0]?.message || nested.message || errorMessage;
+      } else {
+        errorMessage = nested?.message || (errorData as ApiError).message || errorMessage;
+      }
     } catch {
       // response body not JSON
     }
@@ -174,8 +181,9 @@ export async function apiUpload<T = unknown>(
   if (!res.ok) {
     let errorMessage = `Upload failed with status ${res.status}`;
     try {
-      const errorData: ApiError = await res.json();
-      errorMessage = errorData.message || errorMessage;
+      const errorData = await res.json();
+      const nested = errorData?.error;
+      errorMessage = nested?.message || (errorData as ApiError).message || errorMessage;
     } catch {
       // ignore
     }

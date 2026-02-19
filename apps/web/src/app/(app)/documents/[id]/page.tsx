@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiGet, apiPost, getAccessToken } from "@/lib/api";
 
@@ -12,6 +12,15 @@ interface Signature {
   status: string;
   signedAt?: string | null;
   order: number;
+  declineReason?: string | null;
+}
+
+interface AuditEvent {
+  id: string;
+  eventType: string;
+  metadata: Record<string, unknown>;
+  timestamp: string;
+  actorId?: string | null;
 }
 
 interface DocumentDetail {
@@ -21,9 +30,12 @@ interface DocumentDetail {
   fileHash: string;
   createdAt: string;
   updatedAt: string;
+  expiresAt?: string | null;
+  voidReason?: string | null;
   blockchainTxHash?: string | null;
   blockchainNetwork?: string | null;
   signatures: Signature[];
+  auditLogs?: AuditEvent[];
 }
 
 const STATUS_MAP: Record<string, string> = {
@@ -42,10 +54,18 @@ function statusClass(status: string): string {
 export default function DocumentDetailPage() {
   const params = useParams();
   const id = params.id as string;
+  const router = useRouter();
   const [doc, setDoc] = useState<DocumentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState("");
+  const [remindingId, setRemindingId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; ok: boolean } | null>(null);
+
+  const showToast = (message: string, ok = true) => {
+    setToast({ message, ok });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   useEffect(() => {
     async function fetchDocument() {
@@ -81,6 +101,25 @@ export default function DocumentDetailPage() {
         const blob = new Blob([html], { type: "text/html" });
         const url = URL.createObjectURL(blob);
         window.open(url, "_blank");
+      } else if (action === "proof") {
+        // Download proof bundle as JSON file
+        const bundle = await apiPost<Record<string, unknown>>("/api/v1/documents/" + id + "/proof", {});
+        const json = JSON.stringify(bundle, null, 2);
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `proof-bundle-${id}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast("Proof bundle downloaded");
+      } else if (action === "verify") {
+        const result = await apiGet<{ verified: boolean; documentHash: string; hashAlgorithm: string }>("/api/v1/documents/" + id + "/verify");
+        if (result.verified) {
+          showToast(`Integrity verified — ${result.hashAlgorithm}: ${result.documentHash.slice(0, 16)}…`, true);
+        } else {
+          showToast("Integrity check FAILED — document may have been tampered with", false);
+        }
       } else if (action === "void") {
         const reason = prompt("Optional: enter a reason for voiding this document:");
         if (reason === null) return; // user cancelled
@@ -94,9 +133,38 @@ export default function DocumentDetailPage() {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Action failed";
-      alert(message);
+      showToast(message, false);
     } finally {
       setActionLoading("");
+    }
+  };
+
+  const handleSaveAsTemplate = async () => {
+    const templateName = prompt("Template name:", doc?.title);
+    if (!templateName) return;
+    try {
+      const result = await apiPost<{ id: string }>("/api/v1/templates", {
+        name: templateName.trim(),
+        fileUrl: (doc as unknown as Record<string, unknown>).fileUrl,
+        fileHash: doc?.fileHash,
+        pageCount: (doc as unknown as Record<string, unknown>).pageCount,
+      });
+      router.push("/templates/" + result.id);
+    } catch {
+      showToast("Failed to save as template", false);
+    }
+  };
+
+  const handleRemind = async (signatureId: string) => {
+    setRemindingId(signatureId);
+    try {
+      await apiPost(`/api/v1/documents/${id}/signatures/${signatureId}/remind`);
+      showToast("Reminder sent!");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to send reminder";
+      showToast(message, false);
+    } finally {
+      setRemindingId(null);
     }
   };
 
@@ -131,6 +199,13 @@ export default function DocumentDetailPage() {
 
   return (
     <div>
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 border-4 font-semibold text-sm uppercase tracking-wide shadow-brutal ${toast.ok ? "bg-black text-white border-black" : "bg-red-600 text-white border-red-600"}`}>
+          {toast.message}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
@@ -150,6 +225,16 @@ export default function DocumentDetailPage() {
                 day: "numeric",
               })}
             </span>
+            {doc.expiresAt && doc.status === "PENDING" && (
+              <span className="text-xs font-mono text-yellow-700 bg-yellow-50 border border-yellow-300 px-2 py-0.5">
+                Expires {new Date(doc.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              </span>
+            )}
+            {doc.voidReason && (
+              <span className="text-xs font-mono text-red-700">
+                Reason: {doc.voidReason}
+              </span>
+            )}
           </div>
         </div>
         <Link href="/documents" className="btn-secondary">
@@ -182,6 +267,12 @@ export default function DocumentDetailPage() {
             <Link href={prepareHref} className="btn">
               Prepare for Signing
             </Link>
+            <button
+              onClick={handleSaveAsTemplate}
+              className="px-4 py-2 border-2 border-stone-300 text-sm font-semibold uppercase hover:border-black transition-colors"
+            >
+              Save as Template
+            </button>
             <Link href={sendHref} className="btn">
               Send for Signing
             </Link>
@@ -214,6 +305,27 @@ export default function DocumentDetailPage() {
             className="bg-red-600 text-white font-bold uppercase tracking-wide px-4 py-2 border-4 border-red-600 hover:bg-red-700 transition-colors text-sm disabled:opacity-40"
           >
             {actionLoading === "void" ? "Voiding..." : "Void Document"}
+          </button>
+        )}
+
+        {["PENDING", "SIGNED", "EXPIRED", "VOID"].includes(doc.status) && (
+          <button
+            onClick={async () => {
+              if (!confirm("Create a fresh copy of this document for resending?")) return;
+              setActionLoading("resend");
+              try {
+                const result = await apiPost<{ newDocumentId: string }>("/api/v1/documents/" + id + "/resend", {});
+                router.push("/documents/" + result.newDocumentId + "/send");
+              } catch (err: unknown) {
+                showToast(err instanceof Error ? err.message : "Resend failed", false);
+              } finally {
+                setActionLoading("");
+              }
+            }}
+            disabled={actionLoading !== ""}
+            className="px-4 py-2 border-4 border-black bg-white font-bold text-sm uppercase tracking-wide hover:bg-stone-100 transition-colors disabled:opacity-40"
+          >
+            {actionLoading === "resend" ? "Creating..." : "Resend / Copy"}
           </button>
         )}
 
@@ -261,6 +373,9 @@ export default function DocumentDetailPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
                     Signed At
                   </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -284,11 +399,27 @@ export default function DocumentDetailPage() {
                       >
                         {sig.status}
                       </span>
+                      {sig.status === "DECLINED" && sig.declineReason && (
+                        <p className="text-xs text-stone-500 mt-1 font-mono max-w-xs truncate" title={sig.declineReason}>
+                          {sig.declineReason}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm font-mono text-stone-500">
                       {sig.signedAt
                         ? new Date(sig.signedAt).toLocaleString()
                         : "\u2014"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {sig.status === "PENDING" && doc.status === "PENDING" && (
+                        <button
+                          onClick={() => handleRemind(sig.id)}
+                          disabled={remindingId === sig.id}
+                          className="text-xs font-bold uppercase tracking-wide px-3 py-1 border-2 border-black hover:bg-black hover:text-white transition-colors disabled:opacity-40"
+                        >
+                          {remindingId === sig.id ? "..." : "Remind"}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -324,6 +455,63 @@ export default function DocumentDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Audit Trail */}
+      {doc.auditLogs && doc.auditLogs.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-bold uppercase tracking-tight mb-4">
+            Audit Trail
+          </h2>
+          <div className="border-4 border-black bg-white">
+            {doc.auditLogs.map((event, i) => {
+              const isLast = i === doc.auditLogs!.length - 1;
+              const label = AUDIT_LABELS[event.eventType] ?? event.eventType;
+              const meta = event.metadata as Record<string, unknown>;
+              const detail =
+                (meta.signerEmail as string) ??
+                (meta.reason as string) ??
+                (meta.expiredAt ? "expired" : null) ??
+                null;
+              return (
+                <div
+                  key={event.id}
+                  className={`flex items-start gap-4 px-4 py-3 ${isLast ? "" : "border-b-2 border-stone-100"}`}
+                >
+                  <div className="mt-0.5 w-2 h-2 rounded-full bg-black flex-shrink-0 mt-2" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">{label}</p>
+                    {detail && (
+                      <p className="text-xs font-mono text-stone-500 truncate">{detail}</p>
+                    )}
+                  </div>
+                  <p className="text-xs font-mono text-stone-400 flex-shrink-0">
+                    {new Date(event.timestamp).toLocaleString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+const AUDIT_LABELS: Record<string, string> = {
+  "document.created": "Document uploaded",
+  "document.sent": "Sent for signing",
+  "document.viewed": "Signing page viewed",
+  "document.signed": "Signed",
+  "document.declined": "Declined",
+  "document.completed": "All signatures complete",
+  "document.downloaded": "Document downloaded",
+  "document.voided": "Document voided",
+  "document.expired": "Document expired",
+  "document.reminded": "Reminder sent",
+  "document.anchored": "Anchored to blockchain",
+};

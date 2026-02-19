@@ -87,11 +87,16 @@ model User {
   updatedAt    DateTime     @updatedAt
   lastLoginAt  DateTime?
 
+  // Branding
+  brandingLogoUrl  String?
+  brandingColor    String?
+
   // Existing relations
   documents        Document[]     @relation("UserDocuments")
   createdDocuments Document[]     @relation("CreatedDocuments")
   webhooks         Webhook[]
   refreshTokens    RefreshToken[]
+  tags             Tag[]
 
   // New org relations
   memberships     OrgMembership[]
@@ -103,6 +108,7 @@ model User {
 
   // Platform-level audit logs (actions not tied to org)
   auditLogs AuditLog[] @relation("UserAuditLogs")
+  templates Template[]
 
   @@index([platformRole])
 }
@@ -204,6 +210,9 @@ model Document {
   signatures   Signature[]
   fields       DocumentField[]
   auditLogs    AuditLog[]      @relation("DocumentAuditLogs")
+  recipients   Recipient[]
+  tags         DocumentTag[]
+  templateId   String?
 
   @@index([fileHash])
   @@index([ownerId, status])
@@ -227,7 +236,13 @@ model Signature {
   status          SignatureStatus @default(PENDING)
   order           Int             @default(1)
   reminderSentAt  DateTime?
-  createdAt       DateTime        @default(now())
+  declineReason           String?
+  accessCode              String?
+  accessCodeVerifiedAt    DateTime?
+  delegatedToEmail        String?
+  delegatedToName         String?
+  delegatedAt             DateTime?
+  createdAt               DateTime        @default(now())
 
   document    Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
   fields      DocumentField[]
@@ -409,4 +424,80 @@ model ImpersonationSession {
 
   @@index([adminUserId])
   @@index([targetUserId])
+}
+
+model Template {
+  id          String   @id @default(uuid())
+  ownerId     String
+  name        String
+  description String?
+  fileUrl     String
+  fileHash    String
+  pageCount   Int?
+  useCount    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner  User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  fields TemplateField[]
+
+  @@index([ownerId])
+}
+
+model TemplateField {
+  id         String    @id @default(uuid())
+  templateId String
+  signerRole String    @default("Signer 1")
+  fieldType  FieldType
+  page       Int
+  positionX  Decimal
+  positionY  Decimal
+  width      Decimal
+  height     Decimal
+  required   Boolean   @default(true)
+  label      String?
+  order      Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+model Recipient {
+  id         String    @id @default(uuid())
+  documentId String
+  email      String
+  name       String
+  notifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+model Tag {
+  id        String      @id @default(uuid())
+  userId    String
+  name      String
+  color     String      @default("#3b82f6")
+  createdAt DateTime    @default(now())
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents DocumentTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model DocumentTag {
+  documentId String
+  tagId      String
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, tagId])
 }

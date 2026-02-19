@@ -18,6 +18,7 @@ interface FieldPlacerProps {
   pdfUrl: string;
   signers: Array<{ email: string; name: string }>;
   authToken?: string;
+  fieldsEndpoint?: string;
   onReady?: (handle: FieldPlacerHandle) => void;
 }
 
@@ -26,6 +27,7 @@ export default function FieldPlacer({
   pdfUrl,
   signers,
   authToken,
+  fieldsEndpoint,
   onReady,
 }: FieldPlacerProps) {
   const {
@@ -38,7 +40,7 @@ export default function FieldPlacer({
     saving,
     isDirty,
     loadFields,
-  } = useFieldPlacement(documentId);
+  } = useFieldPlacement(documentId, fieldsEndpoint);
 
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [selectedSignerIndex, setSelectedSignerIndex] = useState(0);

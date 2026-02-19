@@ -6,7 +6,7 @@ import { apiPost } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 interface InviteInfo {
-  organization: { name: string; slug: string };
+  organization: { name: string; slug?: string };
   role: string;
   invitedBy: { name: string };
   email: string;

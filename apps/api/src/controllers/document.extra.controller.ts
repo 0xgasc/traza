@@ -276,14 +276,31 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
       }),
     ]);
 
-    const recentActivity = await prisma.auditLog.findMany({
-      where: { document: { ownerId: userId } },
-      orderBy: { timestamp: 'desc' },
-      take: 10,
-      include: {
-        document: { select: { title: true } },
-      },
-    });
+    const [recentActivity, pendingDocuments] = await Promise.all([
+      prisma.auditLog.findMany({
+        where: { document: { ownerId: userId } },
+        orderBy: { timestamp: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          eventType: true,
+          metadata: true,
+          timestamp: true,
+          document: { select: { id: true, title: true } },
+        },
+      }),
+      prisma.document.findMany({
+        where: { ownerId: userId, status: 'PENDING' },
+        orderBy: { expiresAt: 'asc' },
+        take: 5,
+        select: {
+          id: true,
+          title: true,
+          expiresAt: true,
+          _count: { select: { signatures: { where: { status: 'PENDING' } } } },
+        },
+      }),
+    ]);
 
     success(res, {
       stats: {
@@ -293,6 +310,7 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
         totalSignatures,
       },
       recentActivity,
+      pendingDocuments,
     });
   } catch (err) {
     next(err);

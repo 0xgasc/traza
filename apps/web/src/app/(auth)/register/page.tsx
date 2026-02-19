@@ -81,10 +81,13 @@ export default function RegisterPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="input w-full"
-            placeholder="Min 8 characters"
+            placeholder="Min 10 characters"
             required
-            minLength={8}
+            minLength={10}
           />
+          <p className="mt-1 text-xs text-stone-400 font-mono">
+            10+ chars · uppercase · lowercase · number · special character
+          </p>
         </div>
 
         <button

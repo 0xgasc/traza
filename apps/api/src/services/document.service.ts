@@ -69,6 +69,19 @@ export async function getDocument(id: string, userId: string) {
           status: true,
           signedAt: true,
           order: true,
+          declineReason: true,
+        },
+        orderBy: { order: 'asc' },
+      },
+      auditLogs: {
+        orderBy: { timestamp: 'desc' },
+        take: 30,
+        select: {
+          id: true,
+          eventType: true,
+          metadata: true,
+          timestamp: true,
+          actorId: true,
         },
       },
     },
@@ -83,7 +96,7 @@ export async function getDocument(id: string, userId: string) {
 
 export async function listDocuments(
   userId: string,
-  filters: { status?: DocumentStatus; page?: number; limit?: number },
+  filters: { status?: DocumentStatus; page?: number; limit?: number; search?: string; tagId?: string },
 ) {
   const page = filters.page || 1;
   const limit = Math.min(filters.limit || 20, 100);
@@ -92,6 +105,8 @@ export async function listDocuments(
   const where = {
     ownerId: userId,
     ...(filters.status ? { status: filters.status } : {}),
+    ...(filters.search ? { title: { contains: filters.search, mode: 'insensitive' as const } } : {}),
+    ...(filters.tagId ? { tags: { some: { tagId: filters.tagId } } } : {}),
   };
 
   const [documents, total] = await Promise.all([
@@ -102,6 +117,7 @@ export async function listDocuments(
       take: limit,
       include: {
         _count: { select: { signatures: true } },
+        tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
       },
     }),
     prisma.document.count({ where }),
@@ -196,6 +212,83 @@ export async function voidDocument(id: string, userId: string, reason?: string) 
   }
 
   return { voided: true };
+}
+
+export async function resendDocument(id: string, userId: string) {
+  const document = await prisma.document.findUnique({
+    where: { id },
+    include: {
+      fields: true,
+    },
+  });
+
+  if (!document || document.ownerId !== userId) {
+    throw new AppError(404, 'NOT_FOUND', 'Document not found');
+  }
+
+  if (!['PENDING', 'EXPIRED', 'VOID', 'SIGNED'].includes(document.status)) {
+    throw new AppError(400, 'INVALID_STATUS', 'Cannot resend a DRAFT document — send it first');
+  }
+
+  const newDocument = await prisma.$transaction(async (tx) => {
+    // Void original if still PENDING
+    if (document.status === 'PENDING') {
+      await tx.document.update({
+        where: { id },
+        data: { status: 'VOID', voidedAt: new Date(), voidReason: 'Resent by owner' },
+      });
+      await tx.signature.updateMany({
+        where: { documentId: id, status: 'PENDING' },
+        data: { status: 'DECLINED' },
+      });
+    }
+
+    // Create new DRAFT document with the same file
+    const newDoc = await tx.document.create({
+      data: {
+        ownerId: userId,
+        title: document.title,
+        fileUrl: document.fileUrl,
+        fileHash: document.fileHash,
+        pageCount: document.pageCount,
+        templateId: document.templateId,
+        status: 'DRAFT',
+      },
+    });
+
+    // Copy fields (positions preserved, signatures reset)
+    if (document.fields.length > 0) {
+      await tx.documentField.createMany({
+        data: document.fields.map((f) => ({
+          documentId: newDoc.id,
+          signerEmail: f.signerEmail,
+          signerName: f.signerName,
+          fieldType: f.fieldType,
+          page: f.page,
+          positionX: f.positionX,
+          positionY: f.positionY,
+          width: f.width,
+          height: f.height,
+          required: f.required,
+          label: f.label,
+          order: f.order,
+        })),
+      });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        documentId: newDoc.id,
+        eventType: 'document.created',
+        actorId: userId,
+        metadata: { resendOf: id, title: document.title },
+      },
+    });
+
+    return newDoc;
+  });
+
+  return { newDocumentId: newDocument.id };
 }
 
 export async function deleteDocument(id: string, userId: string) {

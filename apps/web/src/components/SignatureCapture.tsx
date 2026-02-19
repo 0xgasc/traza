@@ -8,12 +8,39 @@ interface SignatureCaptureProps {
 
 type TabMode = "draw" | "type";
 
+interface FontOption {
+  name: string;
+  family: string;
+  cssFont: string;
+}
+
+const SIGNATURE_FONTS: FontOption[] = [
+  { name: "Elegant", family: "Dancing Script", cssFont: '"Dancing Script", cursive' },
+  { name: "Classic", family: "La Belle Aurore", cssFont: '"La Belle Aurore", cursive' },
+  { name: "Casual", family: "Caveat", cssFont: '"Caveat", cursive' },
+  { name: "Bold", family: "Pacifico", cssFont: '"Pacifico", cursive' },
+];
+
+const GOOGLE_FONTS_URL =
+  "https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=La+Belle+Aurore&family=Caveat:wght@700&family=Pacifico&display=swap";
+
 export default function SignatureCapture({ onComplete }: SignatureCaptureProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
   const [activeTab, setActiveTab] = useState<TabMode>("draw");
   const [typedName, setTypedName] = useState("");
+  const [selectedFont, setSelectedFont] = useState<FontOption>(SIGNATURE_FONTS[0]!);
+
+  // Load Google Fonts once
+  useEffect(() => {
+    if (document.querySelector('link[data-sig-fonts]')) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = GOOGLE_FONTS_URL;
+    link.setAttribute("data-sig-fonts", "true");
+    document.head.appendChild(link);
+  }, []);
 
   const getCanvas = useCallback(() => canvasRef.current, []);
   const getCtx = useCallback(() => {
@@ -107,10 +134,10 @@ export default function SignatureCapture({ onComplete }: SignatureCaptureProps) 
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, 600, 200);
       ctx.fillStyle = "#000000";
-      ctx.font = 'italic 48px "Inter", sans-serif';
+      ctx.font = `64px ${selectedFont.cssFont}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(typedName, 300, 100);
+      ctx.fillText(typedName, 300, 110);
       const dataUrl = canvas.toDataURL("image/png");
       onComplete(dataUrl);
     }
@@ -172,13 +199,36 @@ export default function SignatureCapture({ onComplete }: SignatureCaptureProps) 
               value={typedName}
               onChange={(e) => setTypedName(e.target.value)}
               placeholder="Type your full name"
-              className="input w-full text-2xl italic"
+              className="input w-full text-xl"
             />
-            {typedName && (
-              <div className="mt-4 p-6 border-3 border-stone-200 bg-stone-50 text-center">
-                <span className="text-3xl italic">{typedName}</span>
-              </div>
-            )}
+
+            {/* Font picker */}
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              {SIGNATURE_FONTS.map((font) => (
+                <button
+                  key={font.family}
+                  onClick={() => setSelectedFont(font)}
+                  className={`p-3 border-2 text-left transition-colors ${
+                    selectedFont.family === font.family
+                      ? "border-black bg-black text-white"
+                      : "border-stone-200 bg-white text-black hover:border-black"
+                  }`}
+                >
+                  <span className="block text-xs font-mono uppercase tracking-wide mb-1 opacity-60">
+                    {font.name}
+                  </span>
+                  <span
+                    style={{ fontFamily: font.cssFont, fontSize: "1.75rem", lineHeight: 1.2 }}
+                  >
+                    {typedName || "Signature"}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <p className="text-xs text-stone-500 mt-3 font-mono">
+              SELECT A STYLE ABOVE
+            </p>
           </div>
         )}
       </div>

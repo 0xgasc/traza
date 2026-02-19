@@ -278,3 +278,25 @@ async function createTokenPair(
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
+
+export async function updateProfile(userId: string, name: string) {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { name },
+    select: { id: true, email: true, name: true, platformRole: true },
+  });
+  return user;
+}
+
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new AppError(404, 'NOT_FOUND', 'User not found');
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) throw new AppError(401, 'INVALID_PASSWORD', 'Current password is incorrect');
+
+  const passwordHash = await bcrypt.hash(newPassword, AUTH_CONFIG.bcryptRounds);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+
+  return { changed: true };
+}

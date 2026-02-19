@@ -90,3 +90,23 @@ export async function createApiKey(req: Request, res: Response, next: NextFuncti
     next(err);
   }
 }
+
+export async function updateProfile(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { name } = req.body;
+    const user = await authService.updateProfile(req.user!.userId, name);
+    success(res, user);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function changePassword(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const result = await authService.changePassword(req.user!.userId, currentPassword, newPassword);
+    success(res, result);
+  } catch (err) {
+    next(err);
+  }
+}

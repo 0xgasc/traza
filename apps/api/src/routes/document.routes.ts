@@ -60,6 +60,24 @@ router.put('/:id/fields', requireAuth, fieldController.saveDocumentFields);
 
 router.post('/:id/void', requireAuth, documentController.voidDocument);
 
+router.post('/:id/resend', requireAuth, documentController.resendDocument);
+
 router.delete('/:id', requireAuth, documentController.deleteDocument);
+
+router.get('/:id/recipients', requireAuth, async (req, res, next) => {
+  try {
+    const { getRecipients } = await import('../services/recipient.service.js');
+    const recipients = await getRecipients(req.params.id!, req.user!.userId);
+    res.json(recipients);
+  } catch (err) { next(err); }
+});
+
+router.post('/:id/recipients', requireAuth, async (req, res, next) => {
+  try {
+    const { addRecipients } = await import('../services/recipient.service.js');
+    const recipients = await addRecipients(req.params.id!, req.user!.userId, req.body.recipients ?? []);
+    res.json(recipients);
+  } catch (err) { next(err); }
+});
 
 export default router;
