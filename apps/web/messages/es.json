@@ -123,7 +123,13 @@
       "document_voided": "Anulado",
       "document_expired": "Expirado",
       "reminder_sent": "Recordatorio enviado",
-      "document_anchored": "Anclado en blockchain"
+      "document_anchored": "Anclado en blockchain",
+      "document": {
+        "created": "Documento creado",
+        "sent": "Enviado para firmar",
+        "downloaded": "Descargado",
+        "voided": "Anulado"
+      }
     }
   },
   "documents": {
@@ -184,17 +190,28 @@
     "documentHash": "Hash del Documento",
     "download": "Descargar",
     "prepare": "Preparar para Firmar",
+    "prepareForSigning": "Preparar para Firmar",
     "saveTemplate": "Guardar como Plantilla",
+    "saveAsTemplate": "Guardar como Plantilla",
     "send": "Enviar para Firmar",
+    "sendForSigning": "Enviar para Firmar",
     "certificate": "Certificado de Finalización",
     "proofBundle": "Descargar Paquete de Prueba",
+    "downloadProof": "Descargar Paquete de Prueba",
     "void": "Anular Documento",
+    "voidDocument": "Anular Documento",
     "voiding": "Anulando...",
+    "voidPrompt": "Ingresa la razón para anular (opcional):",
     "resendPrompt": "¿Crear una copia nueva de este documento para reenviar?",
+    "resendConfirm": "¿Crear una copia nueva de este documento para reenviar?",
     "resend": "Reenviar / Copiar",
+    "resendCopy": "Reenviar / Copiar",
     "resending": "Creando...",
+    "creating": "Creando...",
+    "resendFailed": "No se pudo crear la copia",
     "verifyIntegrity": "Verificar Integridad",
     "anchor": "Anclar en Blockchain",
+    "anchorBlockchain": "Anclar en Blockchain",
     "signers": "Firmantes",
     "columns": {
       "num": "#",
@@ -205,14 +222,24 @@
       "actions": "Acciones"
     },
     "remind": "Recordar",
+    "reminderSent": "Recordatorio enviado",
     "blockchainAnchor": "Ancla Blockchain",
     "txHash": "Hash de Transacción",
+    "transactionHash": "Hash de Transacción",
     "network": "Red",
     "auditTrail": "Registro de Auditoría",
     "expires": "Expira {date}",
     "voidReason": "Razón: {reason}",
+    "reason": "Razón",
     "integrityOk": "Integridad verificada — {algo}: {hash}…",
-    "integrityFailed": "Verificación de integridad FALLIDA — el documento puede haber sido manipulado"
+    "integrityVerified": "Integridad verificada",
+    "integrityFailed": "Verificación de integridad FALLIDA — el documento puede haber sido manipulado",
+    "downloadStarted": "Descargando...",
+    "proofDownloaded": "Paquete de prueba descargado",
+    "templateNamePrompt": "Nombre de la plantilla:",
+    "templateFailed": "No se pudo guardar como plantilla",
+    "notFound": "Documento no encontrado.",
+    "backToDocuments": "Volver a Documentos"
   },
   "prepare": {
     "title": "Preparar Documento",

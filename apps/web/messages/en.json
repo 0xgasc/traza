@@ -123,7 +123,13 @@
       "document_voided": "Voided",
       "document_expired": "Expired",
       "reminder_sent": "Reminder sent",
-      "document_anchored": "Anchored to blockchain"
+      "document_anchored": "Anchored to blockchain",
+      "document": {
+        "created": "Document created",
+        "sent": "Sent for signing",
+        "downloaded": "Downloaded",
+        "voided": "Voided"
+      }
     }
   },
   "documents": {
@@ -184,17 +190,28 @@
     "documentHash": "Document Hash",
     "download": "Download",
     "prepare": "Prepare for Signing",
+    "prepareForSigning": "Prepare for Signing",
     "saveTemplate": "Save as Template",
+    "saveAsTemplate": "Save as Template",
     "send": "Send for Signing",
+    "sendForSigning": "Send for Signing",
     "certificate": "Certificate of Completion",
     "proofBundle": "Download Proof Bundle",
+    "downloadProof": "Download Proof Bundle",
     "void": "Void Document",
+    "voidDocument": "Void Document",
     "voiding": "Voiding...",
+    "voidPrompt": "Enter reason for voiding (optional):",
     "resendPrompt": "Create a fresh copy of this document for resending?",
+    "resendConfirm": "Create a fresh copy of this document for resending?",
     "resend": "Resend / Copy",
+    "resendCopy": "Resend / Copy",
     "resending": "Creating...",
+    "creating": "Creating...",
+    "resendFailed": "Failed to create copy",
     "verifyIntegrity": "Verify Integrity",
     "anchor": "Anchor to Blockchain",
+    "anchorBlockchain": "Anchor to Blockchain",
     "signers": "Signers",
     "columns": {
       "num": "#",
@@ -205,14 +222,24 @@
       "actions": "Actions"
     },
     "remind": "Remind",
+    "reminderSent": "Reminder sent",
     "blockchainAnchor": "Blockchain Anchor",
     "txHash": "Transaction Hash",
+    "transactionHash": "Transaction Hash",
     "network": "Network",
     "auditTrail": "Audit Trail",
     "expires": "Expires {date}",
     "voidReason": "Reason: {reason}",
+    "reason": "Reason",
     "integrityOk": "Integrity verified — {algo}: {hash}…",
-    "integrityFailed": "Integrity check FAILED — document may have been tampered with"
+    "integrityVerified": "Integrity verified",
+    "integrityFailed": "Integrity check FAILED — document may have been tampered with",
+    "downloadStarted": "Downloading...",
+    "proofDownloaded": "Proof bundle downloaded",
+    "templateNamePrompt": "Template name:",
+    "templateFailed": "Failed to save as template",
+    "notFound": "Document not found.",
+    "backToDocuments": "Back to Documents"
   },
   "prepare": {
     "title": "Prepare Document",
