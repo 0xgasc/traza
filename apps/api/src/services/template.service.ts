@@ -237,7 +237,7 @@ export async function bulkSendFromTemplate(
       const signers = roles
         .filter((role) => row.signerRoleMap[role])
         .map((role, idx) => ({
-          email: row.signerRoleMap[role],
+          email: row.signerRoleMap[role] as string,
           name: row.signerNames?.[role] || role,
           order: idx + 1,
         }));

@@ -17,7 +17,7 @@ router.post('/:id/bulk-send', requireAuth, templateController.bulkSend);
 router.get('/:id/pdf', requireAuth, async (req, res, next) => {
   try {
     const template = await prisma.template.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
     });
     if (!template || template.ownerId !== req.user!.userId) {
       throw new AppError(404, 'NOT_FOUND', 'Template not found');

@@ -39,11 +39,11 @@ router.post('/', requireAuth, async (req, res, next) => {
 // Delete a tag
 router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
-    const tag = await prisma.tag.findUnique({ where: { id: req.params.id } });
+    const tag = await prisma.tag.findUnique({ where: { id: req.params.id as string } });
     if (!tag || tag.userId !== req.user!.userId) {
       throw new AppError(404, 'NOT_FOUND', 'Tag not found');
     }
-    await prisma.tag.delete({ where: { id: req.params.id } });
+    await prisma.tag.delete({ where: { id: req.params.id as string } });
     res.status(204).send();
   } catch (err) { next(err); }
 });
@@ -52,14 +52,14 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
 router.post('/documents/:documentId', requireAuth, async (req, res, next) => {
   try {
     const { tagId } = req.body;
-    const doc = await prisma.document.findUnique({ where: { id: req.params.documentId } });
+    const doc = await prisma.document.findUnique({ where: { id: req.params.documentId as string } });
     if (!doc || doc.ownerId !== req.user!.userId) throw new AppError(404, 'NOT_FOUND', 'Document not found');
     const tag = await prisma.tag.findUnique({ where: { id: tagId } });
     if (!tag || tag.userId !== req.user!.userId) throw new AppError(404, 'NOT_FOUND', 'Tag not found');
 
     await prisma.documentTag.upsert({
-      where: { documentId_tagId: { documentId: req.params.documentId, tagId } },
-      create: { documentId: req.params.documentId, tagId },
+      where: { documentId_tagId: { documentId: req.params.documentId as string, tagId } },
+      create: { documentId: req.params.documentId as string, tagId },
       update: {},
     });
     success(res, { ok: true });
@@ -70,7 +70,7 @@ router.post('/documents/:documentId', requireAuth, async (req, res, next) => {
 router.delete('/documents/:documentId/:tagId', requireAuth, async (req, res, next) => {
   try {
     await prisma.documentTag.deleteMany({
-      where: { documentId: req.params.documentId, tagId: req.params.tagId },
+      where: { documentId: req.params.documentId as string, tagId: req.params.tagId as string },
     });
     res.status(204).send();
   } catch (err) { next(err); }

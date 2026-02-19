@@ -67,7 +67,7 @@ router.delete('/:id', requireAuth, documentController.deleteDocument);
 router.get('/:id/recipients', requireAuth, async (req, res, next) => {
   try {
     const { getRecipients } = await import('../services/recipient.service.js');
-    const recipients = await getRecipients(req.params.id!, req.user!.userId);
+    const recipients = await getRecipients(req.params.id as string, req.user!.userId);
     res.json(recipients);
   } catch (err) { next(err); }
 });
@@ -75,7 +75,7 @@ router.get('/:id/recipients', requireAuth, async (req, res, next) => {
 router.post('/:id/recipients', requireAuth, async (req, res, next) => {
   try {
     const { addRecipients } = await import('../services/recipient.service.js');
-    const recipients = await addRecipients(req.params.id!, req.user!.userId, req.body.recipients ?? []);
+    const recipients = await addRecipients(req.params.id as string, req.user!.userId, req.body.recipients ?? []);
     res.json(recipients);
   } catch (err) { next(err); }
 });

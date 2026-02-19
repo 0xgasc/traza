@@ -11,7 +11,7 @@ export async function listTemplates(req: Request, res: Response, next: NextFunct
 
 export async function getTemplate(req: Request, res: Response, next: NextFunction) {
   try {
-    const template = await templateService.getTemplate(req.params.id!, req.user!.userId);
+    const template = await templateService.getTemplate(req.params.id as string, req.user!.userId);
     success(res, template);
   } catch (err) { next(err); }
 }
@@ -32,7 +32,7 @@ export async function createTemplate(req: Request, res: Response, next: NextFunc
 export async function updateTemplate(req: Request, res: Response, next: NextFunction) {
   try {
     const template = await templateService.updateTemplate(
-      req.params.id!, req.user!.userId, req.body,
+      req.params.id as string, req.user!.userId, req.body,
     );
     success(res, template);
   } catch (err) { next(err); }
@@ -40,7 +40,7 @@ export async function updateTemplate(req: Request, res: Response, next: NextFunc
 
 export async function deleteTemplate(req: Request, res: Response, next: NextFunction) {
   try {
-    await templateService.deleteTemplate(req.params.id!, req.user!.userId);
+    await templateService.deleteTemplate(req.params.id as string, req.user!.userId);
     res.status(204).send();
   } catch (err) { next(err); }
 }
@@ -48,7 +48,7 @@ export async function deleteTemplate(req: Request, res: Response, next: NextFunc
 export async function saveTemplateFields(req: Request, res: Response, next: NextFunction) {
   try {
     const fields = await templateService.saveTemplateFields(
-      req.params.id!, req.user!.userId, req.body.fields ?? [],
+      req.params.id as string, req.user!.userId, req.body.fields ?? [],
     );
     success(res, fields);
   } catch (err) { next(err); }
@@ -56,7 +56,7 @@ export async function saveTemplateFields(req: Request, res: Response, next: Next
 
 export async function getTemplateSignerRoles(req: Request, res: Response, next: NextFunction) {
   try {
-    const roles = await templateService.getTemplateSignerRoles(req.params.id!, req.user!.userId);
+    const roles = await templateService.getTemplateSignerRoles(req.params.id as string, req.user!.userId);
     success(res, roles);
   } catch (err) { next(err); }
 }
@@ -65,7 +65,7 @@ export async function useTemplate(req: Request, res: Response, next: NextFunctio
   try {
     const { signerRoleMap } = req.body; // { "Signer 1": "email@example.com" }
     const document = await templateService.createDocumentFromTemplate(
-      req.params.id!, req.user!.userId, signerRoleMap ?? {},
+      req.params.id as string, req.user!.userId, signerRoleMap ?? {},
     );
     created(res, document);
   } catch (err) { next(err); }
@@ -78,7 +78,7 @@ export async function bulkSend(req: Request, res: Response, next: NextFunction) 
       return res.status(400).json({ error: { code: 'VALIDATION', message: 'rows array is required' } });
     }
     const results = await templateService.bulkSendFromTemplate(
-      req.params.id!,
+      req.params.id as string,
       req.user!.userId,
       rows.map((r: any) => ({
         signerRoleMap: r.signerRoleMap ?? {},
