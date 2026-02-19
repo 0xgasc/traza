@@ -67,19 +67,14 @@ router.get('/sign/:token/pdf', async (req, res, next) => {
 
     const fileKey = signature.document.pdfFileUrl || signature.document.fileUrl;
 
-    // Try to serve from local storage first (for dev)
+    // Proxy file through the API (works for both local storage and S3/MinIO)
     const buffer = await storage.getFileBuffer(fileKey);
-    if (buffer) {
-      const meta = await storage.getFileMetadata(fileKey);
-      res.setHeader('Content-Type', meta?.contentType || 'application/pdf');
-      res.setHeader('Content-Length', buffer.length);
-      res.send(buffer);
-      return;
-    }
+    if (!buffer) throw new AppError(404, 'NOT_FOUND', 'Document file not found');
 
-    // Fall back to presigned URL redirect
-    const presignedUrl = await storage.generatePresignedUrl(fileKey);
-    res.redirect(presignedUrl);
+    const meta = await storage.getFileMetadata(fileKey);
+    res.setHeader('Content-Type', meta?.contentType || 'application/pdf');
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
   } catch (err) {
     next(err);
   }

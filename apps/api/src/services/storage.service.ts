@@ -118,13 +118,25 @@ export async function getFileBuffer(key: string): Promise<Buffer | null> {
 }
 
 export async function getFileMetadata(key: string): Promise<{ contentType: string } | null> {
+  const env = getEnv();
+
+  if (!useLocalStorage()) {
+    try {
+      const s3 = getS3Client();
+      const response = await s3.send(new HeadObjectCommand({ Bucket: env.S3_BUCKET, Key: key }));
+      return { contentType: response.ContentType || 'application/pdf' };
+    } catch {
+      return { contentType: 'application/pdf' };
+    }
+  }
+
   try {
     const filePath = path.join(LOCAL_STORAGE_DIR, key.replace(/\//g, '_'));
     const metaPath = filePath + '.meta.json';
     const meta = JSON.parse(await fs.readFile(metaPath, 'utf-8'));
     return { contentType: meta.contentType };
   } catch {
-    return null;
+    return { contentType: 'application/pdf' };
   }
 }
 

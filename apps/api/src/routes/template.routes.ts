@@ -23,14 +23,11 @@ router.get('/:id/pdf', requireAuth, async (req, res, next) => {
       throw new AppError(404, 'NOT_FOUND', 'Template not found');
     }
     const buffer = await storage.getFileBuffer(template.fileUrl);
-    if (buffer) {
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Length', buffer.length);
-      res.send(buffer);
-      return;
-    }
-    const presignedUrl = await storage.generatePresignedUrl(template.fileUrl);
-    res.redirect(presignedUrl);
+    if (!buffer) throw new AppError(404, 'NOT_FOUND', 'Template file not found');
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
   } catch (err) {
     next(err);
   }

@@ -87,8 +87,21 @@ export default function DocumentDetailPage() {
     setActionLoading(action);
     try {
       if (action === "download") {
-        const result = await apiGet<{ downloadUrl: string }>("/api/v1/documents/" + id + "/download");
-        window.open(result.downloadUrl, "_blank");
+        // Stream through the API to avoid direct S3/MinIO URL (which may not be browser-accessible)
+        const token = getAccessToken();
+        const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        const res = await fetch(`${base}/api/v1/documents/${id}/pdf`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error("Failed to download document");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${doc?.title || "document"}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast("Download started");
       } else if (action === "certificate") {
         // Fetch HTML with auth headers, then open as blob
         const token = getAccessToken();
