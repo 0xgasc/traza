@@ -4,6 +4,7 @@ import { generateSigningToken, verifySigningToken } from '../utils/signingToken.
 import { getEnv } from '../config/env.js';
 import { sendSignatureRequestEmail, sendDocumentCompletedEmail, sendReminderEmail, sendSignatureDeclinedEmail } from './email.service.js';
 import { dispatchEvent } from './webhookDispatcher.js';
+import { anchorDocumentToArweave } from './arweave.service.js';
 
 interface SignerInput {
   email: string;
@@ -392,6 +393,11 @@ export async function submitSignature(
     const { notifyCcRecipients } = await import('./recipient.service.js');
     notifyCcRecipients(payload.documentId).catch((err) => {
       console.error('[cc] Failed to notify CC recipients:', err);
+    });
+
+    // Auto-anchor to Arweave (fire and forget — never blocks signing completion)
+    anchorDocumentToArweave(payload.documentId).catch((err) => {
+      console.error('[arweave] Auto-anchor failed:', err);
     });
   } else {
     // Sequential signing: notify the next group of pending signers

@@ -18,6 +18,8 @@ const envSchema = z.object({
   POLYGON_RPC_URL: z.string().default('https://rpc-amoy.polygon.technology'),
   POLYGON_PRIVATE_KEY: z.string().optional(),
   CONTRACT_ADDRESS: z.string().optional(),
+  IRYS_PRIVATE_KEY: z.string().optional(),
+  IRYS_RPC_URL: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default('sign@traza.dev'),
   SENTRY_DSN: z.string().optional(),

@@ -444,7 +444,7 @@ export default function DocumentDetailPage() {
         </div>
       )}
 
-      {/* Blockchain Info */}
+      {/* Blockchain / Arweave Anchor Info */}
       {doc.blockchainTxHash && (
         <div className="mb-8">
           <h2 className="text-xl font-bold uppercase tracking-tight mb-4">
@@ -456,9 +456,20 @@ export default function DocumentDetailPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">
                   {t("transactionHash")}
                 </p>
-                <p className="font-mono text-sm break-all">
-                  {doc.blockchainTxHash}
-                </p>
+                {doc.blockchainNetwork === "arweave" ? (
+                  <a
+                    href={`https://arweave.net/${doc.blockchainTxHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono text-sm break-all underline hover:text-stone-600"
+                  >
+                    {doc.blockchainTxHash}
+                  </a>
+                ) : (
+                  <p className="font-mono text-sm break-all">
+                    {doc.blockchainTxHash}
+                  </p>
+                )}
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">
