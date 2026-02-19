@@ -46,6 +46,7 @@ export default function FieldPlacer({
   const [selectedSignerIndex, setSelectedSignerIndex] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [scale] = useState(1.0);
+  const [activeTool, setActiveTool] = useState<string | null>(null);
   const loadedRef = useRef(false);
   const onReadyCalled = useRef(false);
 
@@ -71,14 +72,19 @@ export default function FieldPlacer({
     }
   }, [onReady, save, isDirty, saving]);
 
-  const handleAddField = useCallback(
-    (fieldType: string) => {
-      if (signers.length === 0) return;
-      const signer = signers[selectedSignerIndex];
-      addField(fieldType, currentPage, signer.email, signer.name);
-    },
-    [signers, selectedSignerIndex, currentPage, addField]
-  );
+  // Escape key clears the active tool
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActiveTool(null);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
+
+  // Toolbar button clicked: toggle the active tool (click again to deselect)
+  const handleSelectTool = useCallback((fieldType: string) => {
+    setActiveTool((prev) => (prev === fieldType ? null : fieldType));
+  }, []);
 
   const handleSave = useCallback(async () => {
     try {
@@ -104,6 +110,7 @@ export default function FieldPlacer({
           scale={scale}
           selectedFieldId={selectedFieldId}
           selectedSignerIndex={selectedSignerIndex}
+          activeTool={activeTool}
           onUpdate={updateField}
           onDelete={removeField}
           onSelect={setSelectedFieldId}
@@ -113,11 +120,11 @@ export default function FieldPlacer({
     },
     [
       fields,
-      currentPage,
       signers,
       scale,
       selectedFieldId,
       selectedSignerIndex,
+      activeTool,
       updateField,
       removeField,
       addField,
@@ -143,7 +150,8 @@ export default function FieldPlacer({
         signers={signers}
         selectedSignerIndex={selectedSignerIndex}
         onSelectSigner={setSelectedSignerIndex}
-        onAddField={handleAddField}
+        onSelectTool={handleSelectTool}
+        activeTool={activeTool}
         onSave={handleSave}
         saving={saving}
         isDirty={isDirty}
@@ -173,10 +181,11 @@ interface PageOverlayProps {
   scale: number;
   selectedFieldId: string | null;
   selectedSignerIndex: number;
+  activeTool: string | null;
   onUpdate: (id: string, changes: Partial<FieldPosition>) => void;
   onDelete: (id: string) => void;
   onSelect: (id: string) => void;
-  onAddField: (fieldType: string, page: number, signerEmail: string, signerName?: string) => void;
+  onAddField: (fieldType: string, page: number, signerEmail: string, signerName?: string, posX?: number, posY?: number) => void;
 }
 
 function PageOverlay({
@@ -186,6 +195,7 @@ function PageOverlay({
   scale,
   selectedFieldId,
   selectedSignerIndex,
+  activeTool,
   onUpdate,
   onDelete,
   onSelect,
@@ -212,15 +222,22 @@ function PageOverlay({
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     if (target !== e.currentTarget) return;
-    if (signers.length === 0) return;
+    if (!activeTool || signers.length === 0) return;
+
+    // Convert click coordinates to percentages relative to the overlay
+    const rect = e.currentTarget.getBoundingClientRect();
+    const rawX = ((e.clientX - rect.left) / rect.width) * 100;
+    const rawY = ((e.clientY - rect.top) / rect.height) * 100;
+
+    // Center a 20×5% field on the click point, clamped to bounds
+    const posX = Math.max(0, Math.min(rawX - 10, 80));
+    const posY = Math.max(0, Math.min(rawY - 2.5, 95));
 
     const signer = signers[selectedSignerIndex];
-    onAddField(
-      'SIGNATURE',
-      pageNumber,
-      signer.email,
-      signer.name
-    );
+    onAddField(activeTool, pageNumber, signer.email, signer.name, posX, posY);
+
+    // Keep tool active so user can place multiple fields of the same type
+    // Press Escape or click the toolbar button again to deactivate
   };
 
   return (
@@ -228,7 +245,7 @@ function PageOverlay({
       ref={overlayRef}
       className="absolute inset-0"
       onClick={handleClick}
-      style={{ cursor: signers.length > 0 ? 'crosshair' : 'default' }}
+      style={{ cursor: activeTool && signers.length > 0 ? 'crosshair' : 'default' }}
     >
       {dims.w > 0 &&
         pageFields.map((field) => {

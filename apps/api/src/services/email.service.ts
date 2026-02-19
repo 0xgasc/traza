@@ -10,6 +10,10 @@ import { SignatureDeclined } from '../emails/SignatureDeclined.js';
 
 let resend: Resend | null = null;
 
+export function getResendClient(): Resend | null {
+  return getResend();
+}
+
 function getResend(): Resend | null {
   const env = getEnv();
   if (!env.RESEND_API_KEY) {

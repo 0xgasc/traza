@@ -15,13 +15,6 @@ interface WebhookDelivery {
   nextRetryAt: string | null;
 }
 
-interface ApiKey {
-  id: string;
-  name: string;
-  keyMasked: string;
-  createdAt: string;
-}
-
 interface Webhook {
   id: string;
   url: string;
@@ -226,41 +219,16 @@ function ProfileTab() {
 }
 
 function ApiKeysTab() {
-  const [keys, setKeys] = useState<ApiKey[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [newKeyName, setNewKeyName] = useState("");
   const [generatedKey, setGeneratedKey] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  const fetchKeys = async () => {
-    try {
-      const data = await apiGet<{ keys: ApiKey[] } | ApiKey[]>(
-        "/api/v1/api-keys"
-      );
-      setKeys(Array.isArray(data) ? data : data.keys);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchKeys();
-  }, []);
-
-  const generateKey = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!newKeyName.trim()) return;
+  const generateKey = async () => {
     setGenerating(true);
     try {
-      const data = await apiPost<{ key: string; apiKey: ApiKey }>(
-        "/api/v1/api-keys",
-        { name: newKeyName.trim() }
-      );
+      const data = await apiPost<{ key: string }>("/api/v1/auth/api-key", {});
       setGeneratedKey(data.key);
-      setNewKeyName("");
-      fetchKeys();
+      setCopied(false);
     } catch {
       // ignore
     } finally {
@@ -268,68 +236,61 @@ function ApiKeysTab() {
     }
   };
 
-  const deleteKey = async (keyId: string) => {
-    try {
-      await apiDelete("/api/v1/api-keys/" + keyId);
-      setKeys(keys.filter((k) => k.id !== keyId));
-    } catch {
-      // ignore
-    }
+  const copyKey = () => {
+    navigator.clipboard.writeText(generatedKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="max-w-2xl">
-      <form onSubmit={generateKey} className="flex gap-3 mb-6">
-        <input
-          type="text"
-          value={newKeyName}
-          onChange={(e) => setNewKeyName(e.target.value)}
-          placeholder="Key name"
-          className="input flex-1"
-          required
-        />
-        <button type="submit" disabled={generating} className="btn">
-          {generating ? "..." : "Generate Key"}
+    <div className="max-w-2xl space-y-6">
+      <div className="border-4 border-black bg-stone-50 p-5">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-2">How API Keys Work</h2>
+        <p className="text-sm text-stone-600 mb-3">
+          Use your API key to authenticate requests without a browser session.
+          Include it as the <span className="font-mono bg-stone-100 px-1">X-API-Key</span> header.
+          Generating a new key immediately revokes the previous one.
+        </p>
+        <div className="font-mono text-xs bg-stone-900 text-green-400 p-3 rounded overflow-x-auto">
+          curl -H &quot;X-API-Key: YOUR_KEY&quot; https://traza-api-production.up.railway.app/api/v1/documents
+        </div>
+      </div>
+
+      <div>
+        <button
+          onClick={generateKey}
+          disabled={generating}
+          className={[
+            "px-6 py-3 border-4 border-black font-bold text-sm uppercase tracking-widest transition-all",
+            "shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1",
+            generating ? "bg-stone-300 text-stone-500 cursor-wait" : "bg-black text-white hover:bg-stone-800",
+          ].join(" ")}
+        >
+          {generating ? "Generating..." : generatedKey ? "Regenerate Key" : "Generate API Key"}
         </button>
-      </form>
+        {generatedKey && (
+          <p className="text-xs text-stone-500 mt-2 font-semibold uppercase">
+            Warning: regenerating invalidates your current key immediately.
+          </p>
+        )}
+      </div>
 
       {generatedKey && (
-        <div className="mb-6 p-4 border-4 border-black bg-stone-100">
-          <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
-            NEW API KEY (COPY NOW - SHOWN ONLY ONCE)
+        <div className="border-4 border-black bg-amber-50 p-5">
+          <p className="text-xs font-bold uppercase tracking-widest text-amber-700 mb-3">
+            Copy This Key Now — It Will Not Be Shown Again
           </p>
-          <p className="font-mono text-sm break-all bg-white p-3 border-2 border-stone-200">
-            {generatedKey}
-          </p>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="card">
-          <div className="h-4 w-full bg-stone-200 animate-pulse" />
-        </div>
-      ) : keys.length === 0 ? (
-        <div className="card">
-          <p className="text-sm text-stone-500">No API keys created yet.</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {keys.map((key) => (
-            <div key={key.id} className="card flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-sm">{key.name}</p>
-                <p className="font-mono text-xs text-stone-500">
-                  {key.keyMasked}
-                </p>
-              </div>
-              <button
-                onClick={() => deleteKey(key.id)}
-                className="px-3 py-1 border-2 border-black text-xs font-semibold uppercase hover:bg-black hover:text-white transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
+          <div className="flex gap-2 items-center">
+            <code className="flex-1 font-mono text-sm break-all bg-white border-2 border-black p-3 select-all">
+              {generatedKey}
+            </code>
+            <button
+              onClick={copyKey}
+              className="px-4 py-3 border-4 border-black font-bold text-xs uppercase tracking-widest bg-black text-white hover:bg-stone-800 flex-shrink-0"
+            >
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -337,12 +298,10 @@ function ApiKeysTab() {
 }
 
 const WEBHOOK_EVENTS = [
-  { value: "document.signed", label: "Signature Added" },
+  { value: "document.sent", label: "Sent for Signing" },
+  { value: "signature.signed", label: "Signature Added" },
   { value: "document.completed", label: "All Signed" },
-  { value: "document.declined", label: "Declined" },
-  { value: "document.expired", label: "Expired" },
-  { value: "document.voided", label: "Voided" },
-  { value: "document.viewed", label: "Viewed" },
+  { value: "signature.declined", label: "Declined" },
 ];
 
 function WebhookDeliveryLog({ webhookId }: { webhookId: string }) {
@@ -412,7 +371,7 @@ function WebhooksTab() {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [loading, setLoading] = useState(true);
   const [newUrl, setNewUrl] = useState("");
-  const [selectedEvents, setSelectedEvents] = useState<string[]>(["document.signed", "document.completed"]);
+  const [selectedEvents, setSelectedEvents] = useState<string[]>(["signature.signed", "document.completed"]);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);

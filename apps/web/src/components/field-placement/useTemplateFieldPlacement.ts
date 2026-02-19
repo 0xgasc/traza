@@ -80,13 +80,13 @@ export function useTemplateFieldPlacement(templateId: string) {
   }, [templateId]);
 
   const addField = useCallback(
-    (fieldType: string, page: number, signerRole: string, signerName?: string) => {
+    (fieldType: string, page: number, signerRole: string, signerName?: string, posX?: number, posY?: number) => {
       const newField: TemplateFieldPosition = {
         id: generateId(),
         fieldType: fieldType as FieldPosition['fieldType'],
         page,
-        positionX: 35,
-        positionY: 40,
+        positionX: posX ?? 35,
+        positionY: posY ?? 40,
         width: 20,
         height: 5,
         signerRole,

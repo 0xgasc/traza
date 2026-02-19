@@ -69,6 +69,8 @@ router.post('/documents/:documentId', requireAuth, async (req, res, next) => {
 // Remove tag from document
 router.delete('/documents/:documentId/:tagId', requireAuth, async (req, res, next) => {
   try {
+    const doc = await prisma.document.findUnique({ where: { id: req.params.documentId as string } });
+    if (!doc || doc.ownerId !== req.user!.userId) throw new AppError(404, 'NOT_FOUND', 'Document not found');
     await prisma.documentTag.deleteMany({
       where: { documentId: req.params.documentId as string, tagId: req.params.tagId as string },
     });

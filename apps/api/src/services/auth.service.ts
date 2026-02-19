@@ -84,6 +84,12 @@ export async function login(email: string, password: string) {
     throw new AppError(403, 'ACCOUNT_DISABLED', 'Your account has been disabled');
   }
 
+  if (!user.passwordHash) {
+    // Magic-link account — cannot log in with password
+    recordFailedAttempt(email);
+    throw new AppError(401, 'INVALID_CREDENTIALS', 'Invalid email or password');
+  }
+
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
     recordFailedAttempt(email);
@@ -292,6 +298,7 @@ export async function changePassword(userId: string, currentPassword: string, ne
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new AppError(404, 'NOT_FOUND', 'User not found');
 
+  if (!user.passwordHash) throw new AppError(400, 'NO_PASSWORD', 'This account does not have a password set');
   const valid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!valid) throw new AppError(401, 'INVALID_PASSWORD', 'Current password is incorrect');
 

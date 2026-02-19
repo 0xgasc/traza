@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import * as signatureController from '../controllers/signature.controller.js';
 import * as fieldController from '../controllers/field.controller.js';
-import { requireAuth } from '../middleware/auth.middleware.js';
+import { requireAuth, authenticate } from '../middleware/auth.middleware.js';
+import { accessCodeLimiter } from '../middleware/rateLimit.middleware.js';
 import { validate } from '../middleware/validation.middleware.js';
 import {
   sendForSigningSchema,
@@ -15,23 +16,23 @@ import { verifySigningToken } from '../utils/signingToken.js';
 
 const router = Router();
 
-// Authenticated routes (document owner)
+// Authenticated routes (document owner) — accepts Bearer JWT or X-API-Key
 router.post(
   '/documents/:id/send',
-  requireAuth,
+  authenticate,
   validate(sendForSigningSchema),
   signatureController.sendForSigning,
 );
 
 router.get(
   '/documents/:id/signatures',
-  requireAuth,
+  authenticate,
   signatureController.getDocumentSignatures,
 );
 
 router.post(
   '/documents/:id/signatures/:signatureId/remind',
-  requireAuth,
+  authenticate,
   signatureController.remindSigner,
 );
 
@@ -98,10 +99,10 @@ router.post(
   signatureController.declineSignature,
 );
 
-router.post('/sign/:token/access', async (req, res, next) => {
+router.post('/sign/:token/access', accessCodeLimiter, async (req, res, next) => {
   try {
     const { verifyAccessCode } = await import('../services/signature.service.js');
-    const result = await verifyAccessCode(req.params.token!, req.body.code ?? '');
+    const result = await verifyAccessCode(req.params.token as string, req.body.code ?? '');
     res.json(result);
   } catch (err) { next(err); }
 });
@@ -114,7 +115,7 @@ router.post('/sign/:token/delegate', async (req, res, next) => {
       return res.status(400).json({ error: { code: 'VALIDATION', message: 'email and name are required' } });
     }
     const { delegateSignature } = await import('../services/signature.service.js');
-    const result = await delegateSignature(req.params.token!, email.trim().toLowerCase(), name.trim());
+    const result = await delegateSignature(req.params.token as string, email.trim().toLowerCase(), name.trim());
     res.json(result);
   } catch (err) { next(err); }
 });

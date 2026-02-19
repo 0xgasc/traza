@@ -90,7 +90,7 @@ export default function NewOrganizationPage() {
               required
               minLength={2}
               maxLength={50}
-              pattern="[a-z0-9-]+"
+              pattern="[a-z0-9\-]+"
               title="Lowercase letters, numbers, and hyphens only"
             />
           </div>

@@ -14,19 +14,15 @@ router.use(requireAuth);
 // ============================================
 
 const createOrgSchema = z.object({
-  body: z.object({
-    name: z.string().min(2).max(100),
-    slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
-  }),
+  name: z.string().min(2).max(100),
+  slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
 });
 
 const updateOrgSchema = z.object({
-  body: z.object({
-    name: z.string().min(2).max(100).optional(),
-    logoUrl: z.string().url().optional().nullable(),
-    primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-    billingEmail: z.string().email().optional(),
-  }),
+  name: z.string().min(2).max(100).optional(),
+  logoUrl: z.string().url().optional().nullable(),
+  primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  billingEmail: z.string().email().optional(),
 });
 
 // List user's organizations
@@ -52,9 +48,7 @@ router.post('/:orgId/leave', orgController.leaveOrganization);
 // ============================================
 
 const updateMemberSchema = z.object({
-  body: z.object({
-    role: z.enum(['OWNER', 'ADMIN', 'MEMBER', 'VIEWER']),
-  }),
+  role: z.enum(['OWNER', 'ADMIN', 'MEMBER', 'VIEWER']),
 });
 
 // List members (any member can view)
@@ -71,10 +65,8 @@ router.delete('/:orgId/members/:memberId', requireOrgAdmin, orgController.remove
 // ============================================
 
 const inviteSchema = z.object({
-  body: z.object({
-    email: z.string().email(),
-    role: z.enum(['ADMIN', 'MEMBER', 'VIEWER']), // Cannot invite as OWNER
-  }),
+  email: z.string().email(),
+  role: z.enum(['ADMIN', 'MEMBER', 'VIEWER']), // Cannot invite as OWNER
 });
 
 // List pending invitations (requires ADMIN or OWNER)
@@ -91,9 +83,7 @@ router.delete('/:orgId/invitations/:invitationId', requireOrgAdmin, orgControlle
 // ============================================
 
 const acceptInviteSchema = z.object({
-  body: z.object({
-    token: z.string().min(1),
-  }),
+  token: z.string().min(1),
 });
 
 // Accept invitation (authenticated user with token)
@@ -104,9 +94,7 @@ router.post('/invitations/accept', validate(acceptInviteSchema), orgController.a
 // ============================================
 
 const switchOrgSchema = z.object({
-  body: z.object({
-    orgId: z.string().uuid(),
-  }),
+  orgId: z.string().uuid(),
 });
 
 // Switch active organization (returns new token)

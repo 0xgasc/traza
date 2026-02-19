@@ -23,6 +23,17 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
     });
   }
 
+  // Multer file upload errors
+  if (err.name === 'MulterError') {
+    const multerErr = err as Error & { code?: string };
+    const message = multerErr.code === 'LIMIT_FILE_SIZE'
+      ? 'File is too large. Maximum size is 25MB'
+      : `File upload error: ${err.message}`;
+    return res.status(400).json({
+      error: { code: 'FILE_UPLOAD_ERROR', message },
+    });
+  }
+
   // Zod validation errors
   if (err.name === 'ZodError') {
     return res.status(400).json({

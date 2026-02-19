@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import SignatureCapture from "@/components/SignatureCapture";
+
+const SIGNER_TOKEN_KEY = "traza_signer_token";
 
 // Dynamically import SigningView with SSR disabled to avoid pdfjs-dist issues
 const SigningView = dynamic(
@@ -110,6 +112,14 @@ export default function PublicSigningPage() {
   // Branding
   const [branding, setBranding] = useState<{ logoUrl: string | null; primaryColor: string | null }>({ logoUrl: null, primaryColor: null });
 
+  // Signer account
+  const [savedSignatureData, setSavedSignatureData] = useState<string | null>(null);
+  const [showSavePrompt, setShowSavePrompt] = useState(false);
+  const [saveEmail, setSaveEmail] = useState("");
+  const [saveSending, setSaveSending] = useState(false);
+  const [saveSent, setSaveSent] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
   // Delegation
   const [showDelegateForm, setShowDelegateForm] = useState(false);
   const [delegateEmail, setDelegateEmail] = useState("");
@@ -133,6 +143,24 @@ export default function PublicSigningPage() {
         }
         const data = await res.json();
         setContext(data);
+
+        // Check if signer has a saved profile
+        const signerToken = typeof window !== "undefined" ? localStorage.getItem(SIGNER_TOKEN_KEY) : null;
+        if (signerToken) {
+          try {
+            const meRes = await fetch(API_BASE + "/api/v1/signer-auth/me", {
+              headers: { Authorization: `Bearer ${signerToken}` },
+            });
+            if (meRes.ok) {
+              const me = await meRes.json();
+              if (me.email === data.signerEmail && me.savedSignatureData) {
+                setSavedSignatureData(me.savedSignatureData);
+              }
+            }
+          } catch {
+            // Ignore - signer auth is optional
+          }
+        }
 
         // Fetch branding (fire-and-forget)
         fetch(API_BASE + "/api/v1/sign/" + token + "/branding")
@@ -177,6 +205,28 @@ export default function PublicSigningPage() {
     fetchData();
   }, [token]);
 
+  const handleSendMagicLink = useCallback(async () => {
+    if (!saveEmail.trim()) return;
+    setSaveSending(true);
+    setSaveError("");
+    try {
+      const res = await fetch(API_BASE + "/api/v1/signer-auth/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: saveEmail.trim().toLowerCase(), name: context?.signerName }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d?.error?.message || "Failed to send link");
+      }
+      setSaveSent(true);
+    } catch (err: unknown) {
+      setSaveError(err instanceof Error ? err.message : "Failed to send link");
+    } finally {
+      setSaveSending(false);
+    }
+  }, [saveEmail, context?.signerName]);
+
   const handleSign = async (signatureData: string) => {
     setSubmitting(true);
     try {
@@ -192,6 +242,11 @@ export default function PublicSigningPage() {
       const result = await res.json().catch(() => ({}));
       setDocumentCompleted(result.documentCompleted === true);
       setCompleted(true);
+      // Show save-profile prompt unless signer already has a saved sig
+      if (!savedSignatureData && context?.signerEmail) {
+        setSaveEmail(context.signerEmail);
+        setShowSavePrompt(true);
+      }
       if (isEmbed) {
         window.parent.postMessage({ type: "traza:signed", documentCompleted: result.documentCompleted === true }, "*");
       }
@@ -470,6 +525,50 @@ export default function PublicSigningPage() {
             A cryptographic record of your signature has been saved.
             {documentCompleted && " You may close this window."}
           </p>
+
+          {/* Save signature prompt */}
+          {showSavePrompt && !saveSent && (
+            <div className="mt-4 p-4 border-4 border-black bg-stone-50">
+              <p className="text-sm font-black uppercase tracking-wide mb-1">Save Your Signature</p>
+              <p className="text-xs text-stone-500 mb-3">
+                Create a free signer profile to reuse your signature on future documents — no password needed.
+              </p>
+              {saveError && (
+                <p className="text-xs text-red-600 font-semibold mb-2">{saveError}</p>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={saveEmail}
+                  onChange={(e) => setSaveEmail(e.target.value)}
+                  className="input flex-1 text-sm"
+                  placeholder="your@email.com"
+                  onKeyDown={(e) => e.key === "Enter" && handleSendMagicLink()}
+                />
+                <button
+                  onClick={handleSendMagicLink}
+                  disabled={saveSending || !saveEmail.trim()}
+                  className="btn text-sm px-4 whitespace-nowrap disabled:opacity-50"
+                >
+                  {saveSending ? "Sending..." : "Send Link"}
+                </button>
+              </div>
+              <button
+                onClick={() => setShowSavePrompt(false)}
+                className="mt-2 text-xs text-stone-400 hover:text-stone-700 underline"
+              >
+                No thanks
+              </button>
+            </div>
+          )}
+          {saveSent && (
+            <div className="mt-4 p-4 border-4 border-green-500 bg-green-50">
+              <p className="text-sm font-black uppercase tracking-wide text-green-800 mb-1">Check Your Email</p>
+              <p className="text-xs text-green-700">
+                We sent a sign-in link to <strong>{saveEmail}</strong>. Click it to set up your signer profile.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -602,6 +701,7 @@ export default function PublicSigningPage() {
           pdfUrl={pdfUrl}
           fields={fields}
           signerEmail={context.signerEmail}
+          savedSignatureData={savedSignatureData}
           onDecline={() => setShowDeclineForm(true)}
           onDelegate={() => setShowDelegateForm(true)}
         />

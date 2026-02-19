@@ -40,6 +40,10 @@ RUN addgroup --system --gid 1001 nodejs && \
 # Copy entire app directory from build (preserves pnpm symlink structure)
 COPY --from=build --chown=traza:nodejs /app ./
 
+# Create writable local-storage dir for S3 fallback (must run as root before USER switch)
+RUN mkdir -p /app/.local-storage && chown -R traza:nodejs /app/.local-storage
+
 USER traza
 EXPOSE 4000
-CMD ["node", "apps/api/dist/server.js"]
+# Run DB migrations then start server (migrations are idempotent/safe on every deploy)
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema packages/database/prisma/schema.prisma && node apps/api/dist/server.js"]

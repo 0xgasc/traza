@@ -48,7 +48,7 @@ function generateId(): string {
 
 interface UseFieldPlacementReturn {
   fields: FieldPosition[];
-  addField: (fieldType: string, page: number, signerEmail: string, signerName?: string) => void;
+  addField: (fieldType: string, page: number, signerEmail: string, signerName?: string, posX?: number, posY?: number) => void;
   updateField: (id: string, changes: Partial<FieldPosition>) => void;
   removeField: (id: string) => void;
   save: () => Promise<void>;
@@ -98,13 +98,13 @@ export function useFieldPlacement(documentId: string, fieldsEndpoint?: string): 
   }, [documentId, fieldsEndpoint]);
 
   const addField = useCallback(
-    (fieldType: string, page: number, signerEmail: string, signerName?: string) => {
+    (fieldType: string, page: number, signerEmail: string, signerName?: string, posX?: number, posY?: number) => {
       const newField: FieldPosition = {
         id: generateId(),
         fieldType: fieldType as FieldPosition['fieldType'],
         page,
-        positionX: 35,
-        positionY: 40,
+        positionX: posX ?? 35,
+        positionY: posY ?? 40,
         width: 20,
         height: 5,
         signerEmail,

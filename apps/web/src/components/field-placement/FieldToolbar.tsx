@@ -15,7 +15,8 @@ interface FieldToolbarProps {
   signers: Array<{ email: string; name: string }>;
   selectedSignerIndex: number;
   onSelectSigner: (index: number) => void;
-  onAddField: (fieldType: string) => void;
+  onSelectTool: (fieldType: string) => void;
+  activeTool: string | null;
   onSave: () => void;
   saving: boolean;
   isDirty: boolean;
@@ -25,7 +26,8 @@ export default function FieldToolbar({
   signers,
   selectedSignerIndex,
   onSelectSigner,
-  onAddField,
+  onSelectTool,
+  activeTool,
   onSave,
   saving,
   isDirty,
@@ -70,7 +72,7 @@ export default function FieldToolbar({
 
       {/* Field Types */}
       <div className="p-4 border-b-4 border-black flex-1">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-stone-500 mb-3">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-stone-500 mb-2">
           Add Field
         </h3>
         {signers.length === 0 ? (
@@ -78,17 +80,32 @@ export default function FieldToolbar({
             Add signers first
           </p>
         ) : (
-          <div className="flex flex-col gap-2">
-            {FIELD_TYPES.map((ft) => (
-              <button
-                key={ft}
-                onClick={() => onAddField(ft)}
-                className="w-full text-left px-3 py-2 border-2 border-black bg-white font-bold text-xs uppercase tracking-wide hover:bg-stone-900 hover:text-white transition-colors"
-              >
-                <FieldTypeIcon fieldType={ft} />
-              </button>
-            ))}
-          </div>
+          <>
+            <p className="text-[10px] text-stone-400 font-semibold uppercase mb-3 leading-tight">
+              {activeTool
+                ? `Click doc to place ${activeTool.toLowerCase()}`
+                : 'Select a field type'}
+            </p>
+            <div className="flex flex-col gap-2">
+              {FIELD_TYPES.map((ft) => {
+                const isActive = activeTool === ft;
+                return (
+                  <button
+                    key={ft}
+                    onClick={() => onSelectTool(ft)}
+                    className={[
+                      'w-full text-left px-3 py-2 border-2 font-bold text-xs uppercase tracking-wide transition-colors',
+                      isActive
+                        ? 'border-black bg-black text-white'
+                        : 'border-black bg-white text-stone-800 hover:bg-stone-900 hover:text-white',
+                    ].join(' ')}
+                  >
+                    <FieldTypeIcon fieldType={ft} />
+                  </button>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 

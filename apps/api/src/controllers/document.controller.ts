@@ -83,7 +83,12 @@ export async function voidDocument(req: Request, res: Response, next: NextFuncti
 
 export async function deleteDocument(req: Request, res: Response, next: NextFunction) {
   try {
-    await documentService.deleteDocument(req.params.id as string, req.user!.userId);
+    await documentService.deleteDocument(
+      req.params.id as string,
+      req.user!.userId,
+      req.user!.orgId,
+      req.user!.orgRole,
+    );
     res.status(204).send();
   } catch (err) {
     next(err);

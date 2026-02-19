@@ -38,3 +38,17 @@ export const uploadLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// Tight limiter for access code verification — prevents brute-forcing 4-digit codes
+export const accessCodeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,                   // 10 attempts per window per IP
+  message: {
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many access code attempts, please try again later',
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

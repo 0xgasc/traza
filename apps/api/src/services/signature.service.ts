@@ -3,6 +3,7 @@ import { AppError } from '../middleware/error.middleware.js';
 import { generateSigningToken, verifySigningToken } from '../utils/signingToken.js';
 import { getEnv } from '../config/env.js';
 import { sendSignatureRequestEmail, sendDocumentCompletedEmail, sendReminderEmail, sendSignatureDeclinedEmail } from './email.service.js';
+import { dispatchEvent } from './webhookDispatcher.js';
 
 interface SignerInput {
   email: string;
@@ -110,6 +111,13 @@ export async function sendForSigning({
       },
     },
   });
+
+  // Fire webhook
+  dispatchEvent(userId, 'document.sent', documentId, {
+    title: document.title,
+    signers: signers.map((s) => ({ email: s.email, name: s.name })),
+    expiresAt: expiresAt.toISOString(),
+  }).catch((err) => console.error('[webhook] document.sent dispatch failed:', err));
 
   // Send emails only to the FIRST signing group (sequential signing support)
   const owner = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
@@ -291,6 +299,18 @@ export async function submitSignature(
     }
   });
 
+  // Link signer account if one exists for this email
+  const signerUser = await prisma.user.findFirst({
+    where: { email: signature.signerEmail, isSignerAccount: true },
+    select: { id: true },
+  });
+  if (signerUser) {
+    await prisma.signature.update({
+      where: { id: signature.id },
+      data: { signerUserId: signerUser.id },
+    });
+  }
+
   // Audit log
   await prisma.auditLog.create({
     data: {
@@ -308,11 +328,21 @@ export async function submitSignature(
   // Check completion and trigger next-signer emails for sequential workflows
   const allSignatures = await prisma.signature.findMany({
     where: { documentId: payload.documentId },
-    include: { document: { include: { owner: { select: { name: true } } } } },
+    include: { document: { include: { owner: { select: { id: true, name: true } } } } },
     orderBy: { order: 'asc' },
   });
 
   const allSigned = allSignatures.every((s) => s.status === 'SIGNED');
+  const documentOwnerId = allSignatures[0]?.document?.owner?.id;
+
+  // Fire signature.signed webhook for every signing event
+  if (documentOwnerId) {
+    dispatchEvent(documentOwnerId, 'signature.signed', payload.documentId, {
+      signerEmail: signature.signerEmail,
+      signerName: signature.signerName,
+      signedAt: new Date().toISOString(),
+    }).catch((err) => console.error('[webhook] signature.signed dispatch failed:', err));
+  }
 
   if (allSigned) {
     await prisma.document.update({
@@ -330,6 +360,14 @@ export async function submitSignature(
         },
       },
     });
+
+    // Fire document.completed webhook
+    if (documentOwnerId) {
+      dispatchEvent(documentOwnerId, 'document.completed', payload.documentId, {
+        totalSigners: allSignatures.length,
+        completedAt: new Date().toISOString(),
+      }).catch((err) => console.error('[webhook] document.completed dispatch failed:', err));
+    }
 
     // Send completion email to document owner
     const doc = await prisma.document.findUnique({
@@ -419,10 +457,18 @@ export async function declineSignature(token: string, reason?: string) {
   // Notify the document owner
   const doc = await prisma.document.findUnique({
     where: { id: payload.documentId },
-    include: { owner: { select: { email: true, name: true } } },
+    include: { owner: { select: { id: true, email: true, name: true } } },
   });
 
   if (doc?.owner) {
+    // Fire signature.declined webhook
+    dispatchEvent(doc.owner.id, 'signature.declined', payload.documentId, {
+      signerEmail: signature.signerEmail,
+      signerName: signature.signerName,
+      reason: reason ?? null,
+      declinedAt: new Date().toISOString(),
+    }).catch((err) => console.error('[webhook] signature.declined dispatch failed:', err));
+
     const env = getEnv();
     sendSignatureDeclinedEmail({
       to: doc.owner.email,

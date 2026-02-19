@@ -20,10 +20,15 @@ import organizationRoutes from './routes/organization.routes.js';
 import gdprRoutes from './routes/gdpr.routes.js';
 import templateRoutes from './routes/template.routes.js';
 import tagRoutes from './routes/tag.routes.js';
+import signerAuthRoutes from './routes/signer-auth.routes.js';
+
 import { sanitizeInput } from './middleware/sanitize.middleware.js';
 import * as extraController from './controllers/document.extra.controller.js';
 
 const app = express();
+
+// Trust Railway/Heroku/Render proxy so rate-limiters and IP detection work correctly
+app.set('trust proxy', 1);
 
 // Request tracing (correlation IDs)
 app.use(requestTracing);
@@ -137,6 +142,9 @@ app.use('/api/v1/admin', adminRoutes);
 
 // GDPR / Account management
 app.use('/api/v1/account', gdprRoutes);
+
+// Signer auth (magic link sign-in for external signers)
+app.use('/api/v1/signer-auth', signerAuthRoutes);
 
 // Document extra endpoints (verify, anchor, proof, certificate)
 app.get('/api/v1/documents/:id/verify', requireAuth, extraController.verifyDocument);

@@ -291,10 +291,26 @@ export async function resendDocument(id: string, userId: string) {
   return { newDocumentId: newDocument.id };
 }
 
-export async function deleteDocument(id: string, userId: string) {
+export async function deleteDocument(
+  id: string,
+  userId: string,
+  orgId?: string | null,
+  orgRole?: string | null,
+) {
   const document = await prisma.document.findUnique({ where: { id } });
 
-  if (!document || document.ownerId !== userId) {
+  if (!document) {
+    throw new AppError(404, 'NOT_FOUND', 'Document not found');
+  }
+
+  // Allow: document owner/creator OR org admin/owner deleting a document in their org
+  const isOwner = document.ownerId === userId || document.createdById === userId;
+  const isOrgAdmin =
+    orgId &&
+    document.organizationId === orgId &&
+    (orgRole === 'ADMIN' || orgRole === 'OWNER');
+
+  if (!isOwner && !isOrgAdmin) {
     throw new AppError(404, 'NOT_FOUND', 'Document not found');
   }
 
@@ -304,6 +320,9 @@ export async function deleteDocument(id: string, userId: string) {
 
   // Delete from S3
   await storage.deleteFile(document.fileUrl);
+  if (document.pdfFileUrl && document.pdfFileUrl !== document.fileUrl) {
+    await storage.deleteFile(document.pdfFileUrl).catch(() => {});
+  }
 
   // Delete from DB (cascades to signatures, audit logs)
   await prisma.document.delete({ where: { id } });

@@ -71,6 +71,13 @@ export function requireOrgContext(req: Request, _res: Response, next: NextFuncti
       return next(new AppError(400, 'NO_ORG_CONTEXT', 'Organization context required. Please select an organization.'));
     }
 
+    // If the route has an :orgId param, it must match the token's orgId
+    // This prevents cross-org privilege escalation (using org A token to modify org B)
+    const routeOrgId = req.params.orgId;
+    if (routeOrgId && routeOrgId !== payload.orgId) {
+      return next(new AppError(403, 'FORBIDDEN', 'You do not have access to this organization'));
+    }
+
     req.user = payload;
     next();
   } catch {
@@ -95,6 +102,12 @@ export function requireOrgRole(...allowedRoles: OrgRole[]) {
 
       if (!payload.orgId || !payload.orgRole) {
         return next(new AppError(400, 'NO_ORG_CONTEXT', 'Organization context required'));
+      }
+
+      // If the route has an :orgId param, it must match the token's orgId
+      const routeOrgId = req.params.orgId;
+      if (routeOrgId && routeOrgId !== payload.orgId) {
+        return next(new AppError(403, 'FORBIDDEN', 'You do not have access to this organization'));
       }
 
       if (!allowedRoles.includes(payload.orgRole)) {

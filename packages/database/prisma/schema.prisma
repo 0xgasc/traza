@@ -76,7 +76,7 @@ enum InvitationStatus {
 model User {
   id           String       @id @default(uuid())
   email        String       @unique
-  passwordHash String
+  passwordHash String?
   name         String
   platformRole PlatformRole @default(USER)
   // planTier kept temporarily for migration, will move to Organization
@@ -90,6 +90,11 @@ model User {
   // Branding
   brandingLogoUrl  String?
   brandingColor    String?
+
+  // Signer account (sign-only, magic-link auth, no dashboard access)
+  isSignerAccount         Boolean   @default(false)
+  savedSignatureData      String?   // PNG data URL for reuse when signing
+  savedSignatureUpdatedAt DateTime?
 
   // Existing relations
   documents        Document[]     @relation("UserDocuments")
@@ -107,10 +112,12 @@ model User {
   impersonationsAsTarget ImpersonationSession[] @relation("ImpersonationTarget")
 
   // Platform-level audit logs (actions not tied to org)
-  auditLogs AuditLog[] @relation("UserAuditLogs")
-  templates Template[]
+  auditLogs  AuditLog[]  @relation("UserAuditLogs")
+  templates  Template[]
+  signatures Signature[] @relation("SignerAccountHistory")
 
   @@index([platformRole])
+  @@index([isSignerAccount])
 }
 
 model Organization {
@@ -242,13 +249,16 @@ model Signature {
   delegatedToEmail        String?
   delegatedToName         String?
   delegatedAt             DateTime?
+  signerUserId            String?   // Links to signer account if they have one
   createdAt               DateTime        @default(now())
 
   document    Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  signerUser  User?           @relation("SignerAccountHistory", fields: [signerUserId], references: [id], onDelete: SetNull)
   fields      DocumentField[]
   fieldValues FieldValue[]
 
   @@index([documentId])
+  @@index([signerUserId])
 }
 
 model AuditLog {
@@ -500,4 +510,16 @@ model DocumentTag {
   tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([documentId, tagId])
+}
+
+// Magic link tokens for signer-only account authentication (no password)
+model SignerMagicToken {
+  id        String    @id @default(uuid())
+  email     String
+  tokenHash String    @unique // SHA-256 hash of raw token (raw never stored)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
 }

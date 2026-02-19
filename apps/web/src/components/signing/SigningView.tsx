@@ -23,8 +23,10 @@ interface SigningViewProps {
   pdfUrl: string;
   fields: FieldPosition[];
   signerEmail: string;
+  savedSignatureData?: string | null;
   onDecline?: () => void;
   onDelegate?: () => void;
+  onComplete?: (documentCompleted: boolean) => void;
 }
 
 export default function SigningView({
@@ -32,9 +34,23 @@ export default function SigningView({
   pdfUrl,
   fields,
   signerEmail,
+  savedSignatureData,
   onDecline,
   onDelegate,
+  onComplete,
 }: SigningViewProps) {
+  // Pre-populate signature fields with saved signature data if available
+  const initialValues = useMemo(() => {
+    if (!savedSignatureData) return undefined;
+    const init: Record<string, string> = {};
+    for (const f of fields) {
+      if (f.fieldType === 'signature') {
+        init[f.id] = savedSignatureData;
+      }
+    }
+    return Object.keys(init).length > 0 ? init : undefined;
+  }, [fields, savedSignatureData]);
+
   const {
     values,
     setFieldValue,
@@ -45,7 +61,7 @@ export default function SigningView({
     submitting,
     submitted,
     error,
-  } = useSigningState(fields);
+  } = useSigningState(fields, initialValues);
 
   const [pageDimensions, setPageDimensions] = useState<
     Record<number, { width: number; height: number }>

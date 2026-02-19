@@ -112,12 +112,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (data.organizations && data.organizations.length > 0) {
         const activeOrg = data.organizations.find(o => o.status === 'ACTIVE');
         if (activeOrg) {
-          setCurrentOrg({
-            id: activeOrg.id,
-            name: activeOrg.name,
-            slug: activeOrg.slug,
-            role: activeOrg.role,
-          });
+          // Token has no orgId — auto-switch to get an org-scoped token so
+          // routes protected by requireOrgContext work without manual switching
+          try {
+            const switchResult = await apiPost<{
+              accessToken: string;
+              organization: { id: string; name: string; slug: string; role: string };
+            }>('/api/v1/organizations/switch', { orgId: activeOrg.id });
+            setAccessToken(switchResult.accessToken);
+            setCurrentOrg(switchResult.organization);
+          } catch {
+            setCurrentOrg({
+              id: activeOrg.id,
+              name: activeOrg.name,
+              slug: activeOrg.slug,
+              role: activeOrg.role,
+            });
+          }
         }
       }
     } catch {

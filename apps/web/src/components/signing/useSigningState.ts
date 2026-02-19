@@ -15,8 +15,8 @@ interface FieldValuePayload {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
-export function useSigningState(fields: FieldPosition[]) {
-  const [values, setValues] = useState<Record<string, string>>({});
+export function useSigningState(fields: FieldPosition[], initialValues?: Record<string, string>) {
+  const [values, setValues] = useState<Record<string, string>>(initialValues ?? {});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
