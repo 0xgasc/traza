@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect, type ReactNode } from 'react';
-import Script from 'next/script';
 
 // Declare pdfjsLib on window
 declare global {

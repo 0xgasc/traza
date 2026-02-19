@@ -44,7 +44,7 @@ export default function FieldPlacer({
 
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [selectedSignerIndex, setSelectedSignerIndex] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [_currentPage, setCurrentPage] = useState(1);
   const [scale] = useState(1.0);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const loadedRef = useRef(false);

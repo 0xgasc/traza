@@ -37,7 +37,7 @@ export default function SigningView({
   savedSignatureData,
   onDecline,
   onDelegate,
-  onComplete,
+  onComplete: _onComplete,
 }: SigningViewProps) {
   // Pre-populate signature fields with saved signature data if available
   const initialValues = useMemo(() => {

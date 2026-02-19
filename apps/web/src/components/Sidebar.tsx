@@ -14,7 +14,7 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user, currentOrg, isSuperAdmin, logout } = useAuth();
+  const { user, isSuperAdmin, logout } = useAuth();
 
   return (
     <aside className="w-64 min-h-screen bg-white border-r-4 border-black flex flex-col justify-between">
