@@ -245,6 +245,8 @@
     "title": "Preparar Documento",
     "back": "Volver",
     "signers": "Firmantes",
+    "signerName": "Nombre del Firmante",
+    "signerEmail": "Correo del Firmante",
     "loadingPdf": "Cargando Visor PDF...",
     "namePlaceholder": "Juan Pérez",
     "emailPlaceholder": "juan@ejemplo.com",
@@ -256,7 +258,9 @@
     "saved": "¡Guardado!",
     "saveFailed": "Error al guardar",
     "saveAndContinue": "Guardar y Continuar",
-    "saving": "Guardando..."
+    "saving": "Guardando...",
+    "notFound": "Documento no encontrado.",
+    "backToDocuments": "Volver a Documentos"
   },
   "send": {
     "title": "Enviar para Firmar",

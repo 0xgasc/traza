@@ -23,7 +23,9 @@ async function ensureLocalDir() {
 
 function useLocalStorage(): boolean {
   const env = getEnv();
-  return env.NODE_ENV === 'development' && !env.S3_ENDPOINT?.includes('amazonaws');
+  // Use local storage if S3 is not properly configured (still at local MinIO defaults)
+  const isLocalMinIO = env.S3_ENDPOINT === 'http://localhost:9000' || env.S3_ACCESS_KEY_ID === 'minioadmin';
+  return isLocalMinIO && !env.S3_ENDPOINT?.includes('amazonaws');
 }
 
 export async function uploadFile(

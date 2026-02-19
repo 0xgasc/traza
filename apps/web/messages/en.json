@@ -245,6 +245,8 @@
     "title": "Prepare Document",
     "back": "Back",
     "signers": "Signers",
+    "signerName": "Signer Name",
+    "signerEmail": "Signer Email",
     "loadingPdf": "Loading PDF Viewer...",
     "namePlaceholder": "John Doe",
     "emailPlaceholder": "john@example.com",
@@ -256,7 +258,9 @@
     "saved": "Saved!",
     "saveFailed": "Save failed",
     "saveAndContinue": "Save & Continue",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "notFound": "Document not found.",
+    "backToDocuments": "Back to Documents"
   },
   "send": {
     "title": "Send for Signing",
