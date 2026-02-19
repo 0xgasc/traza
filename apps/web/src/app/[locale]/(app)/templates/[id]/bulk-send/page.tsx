@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, ChangeEvent } from "react";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
-import { useRouter, Link } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { apiGet, apiPost } from "@/lib/api";
 
 interface Template {
@@ -45,8 +45,6 @@ export default function BulkSendPage() {
   const t = useTranslations("bulkSend");
   const params = useParams();
   const id = params.id as string;
-  const _router = useRouter();
-
   const [template, setTemplate] = useState<Template | null>(null);
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
