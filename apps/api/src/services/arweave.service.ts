@@ -36,7 +36,7 @@ async function getIrysUploader() {
   return await Uploader(Ethereum)
     .withWallet(key)
     .withRpc(env.IRYS_RPC_URL!)
-    .mainnet();
+    .devnet(); // Using devnet for testing — switch to .mainnet() for production
 }
 
 /**
@@ -89,7 +89,7 @@ export async function anchorDocumentToArweave(
     });
 
     const txId = receipt.id;
-    const url = `https://arweave.net/${txId}`;
+    const url = `https://devnet.irys.xyz/${txId}`; // Devnet gateway — use https://arweave.net for mainnet
 
     await prisma.document.update({
       where: { id: documentId },

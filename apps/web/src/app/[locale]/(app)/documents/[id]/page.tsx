@@ -456,9 +456,13 @@ export default function DocumentDetailPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">
                   {t("transactionHash")}
                 </p>
-                {doc.blockchainNetwork === "arweave" ? (
+                {doc.blockchainNetwork === "arweave" || doc.blockchainNetwork === "arweave-devnet" ? (
                   <a
-                    href={`https://arweave.net/${doc.blockchainTxHash}`}
+                    href={
+                      doc.blockchainNetwork === "arweave-devnet"
+                        ? `https://devnet.irys.xyz/${doc.blockchainTxHash}`
+                        : `https://arweave.net/${doc.blockchainTxHash}`
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-mono text-sm break-all underline hover:text-stone-600"
