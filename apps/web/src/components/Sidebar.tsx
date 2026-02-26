@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import OrgSwitcher from './OrgSwitcher';
+import { LocaleSwitcher } from './LocaleSwitcher';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -90,6 +91,9 @@ export default function Sidebar() {
             )}
           </div>
         )}
+        <div className="mb-3">
+          <LocaleSwitcher className="w-full justify-center" />
+        </div>
         <button
           onClick={logout}
           className="w-full px-4 py-3 bg-white text-black border-4 border-black font-semibold uppercase text-sm tracking-wide hover:bg-black hover:text-white transition-colors"
