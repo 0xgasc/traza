@@ -76,7 +76,7 @@ export async function sendForSigning({
         order,
         signerEmail: signer.email,
         signerName: signer.name,
-        signingUrl: `${env.APP_URL}/sign/${token}`,
+        signingUrl: `${env.APP_URL}/en/sign/${token}`,
       };
     }),
   );
@@ -420,7 +420,7 @@ export async function submitSignature(
           recipientName: nextSig.signerName,
           senderName,
           documentTitle: docInfo?.title ?? 'document',
-          signingUrl: `${env3.APP_URL}/sign/${nextSig.token}`,
+          signingUrl: `${env3.APP_URL}/en/sign/${nextSig.token}`,
           expiresAt: nextSig.tokenExpiresAt,
         }).catch((err) => {
           console.error(`[email] Failed to notify next signer ${nextSig.signerEmail}:`, err);
@@ -535,7 +535,7 @@ export async function remindSigner(documentId: string, signatureId: string, user
     recipientName: sig.signerName,
     senderName,
     documentTitle: document.title,
-    signingUrl: `${env.APP_URL}/sign/${sig.token}`,
+    signingUrl: `${env.APP_URL}/en/sign/${sig.token}`,
     expiresAt: sig.tokenExpiresAt,
   });
 
@@ -652,7 +652,7 @@ export async function delegateSignature(token: string, newEmail: string, newName
     recipientName: newName,
     senderName: owner?.name ?? 'Someone',
     documentTitle: signature.document.title,
-    signingUrl: `${env.APP_URL}/sign/${newToken}`,
+    signingUrl: `${env.APP_URL}/en/sign/${newToken}`,
     expiresAt,
   }).catch((err) => {
     console.error(`[email] Failed to notify delegate ${newEmail}:`, err);
