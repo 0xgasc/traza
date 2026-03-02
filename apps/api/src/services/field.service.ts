@@ -101,5 +101,17 @@ export async function getSignerFields(token: string) {
     orderBy: [{ page: 'asc' }, { order: 'asc' }],
   });
 
-  return fields;
+  // Map database field names to frontend expected names (percentages)
+  return fields.map((field) => ({
+    id: field.id,
+    fieldType: field.fieldType,
+    label: field.label,
+    page: field.page,
+    xPercent: field.positionX,
+    yPercent: field.positionY,
+    widthPercent: field.width,
+    heightPercent: field.height,
+    required: field.required,
+    signerEmail: field.signerEmail,
+  }));
 }
