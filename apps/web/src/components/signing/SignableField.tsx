@@ -48,7 +48,8 @@ export default function SignableField({
   const fieldTypeLabel = (field.fieldType || 'text').toUpperCase();
 
   const renderInput = () => {
-    switch (field.fieldType) {
+    const fieldType = (field.fieldType || 'text').toLowerCase();
+    switch (fieldType) {
       case 'signature':
         return (
           <SignatureFieldInput
