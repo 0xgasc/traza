@@ -212,6 +212,7 @@
     "verifyIntegrity": "Verificar Integridad",
     "anchor": "Anclar en Blockchain",
     "anchorBlockchain": "Anclar en Blockchain",
+    "advancedVerifications": "Verificaciones Avanzadas",
     "signers": "Firmantes",
     "columns": {
       "num": "#",
