@@ -55,6 +55,7 @@ export async function sendSignatureRequestEmail(params: {
   signingUrl: string;
   expiresAt: Date;
   message?: string;
+  locale?: string; // Language for email content (en, es)
 }) {
   const html = await render(
     SignatureRequest({
@@ -81,6 +82,7 @@ export async function sendDocumentCompletedEmail(params: {
   completedAt: Date;
   totalSigners: number;
   downloadUrl: string;
+  locale?: string; // Language for email content (en, es)
 }) {
   const html = await render(
     DocumentCompleted({
@@ -106,6 +108,7 @@ export async function sendReminderEmail(params: {
   documentTitle: string;
   signingUrl: string;
   expiresAt: Date;
+  locale?: string; // Language for email content (en, es)
 }) {
   const html = await render(
     Reminder({
