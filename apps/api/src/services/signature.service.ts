@@ -141,6 +141,7 @@ export async function sendForSigning({
       documentTitle: document.title,
       signingUrl: record.signingUrl,
       expiresAt,
+      locale: emailLocale, // Use document's email language
     }).catch((err) => {
       console.error(`[email] Failed to send signature request to ${record.signerEmail}:`, err);
     });
@@ -387,6 +388,7 @@ export async function submitSignature(
         completedAt: new Date(),
         totalSigners: allSignatures.length,
         downloadUrl: `${env2.APP_URL}/documents/${doc.id}`,
+        locale: doc.emailLocale || 'en', // Use document's email language
       }).catch((err) => {
         console.error(`[email] Failed to send completion email:`, err);
       });
@@ -443,6 +445,7 @@ export async function submitSignature(
           documentTitle: docInfo?.title ?? 'document',
           signingUrl: `${env3.APP_URL}/en/sign/${nextSig.token}`,
           expiresAt: nextSig.tokenExpiresAt,
+          locale: docInfo?.emailLocale || 'en', // Use document's email language
         }).catch((err) => {
           console.error(`[email] Failed to notify next signer ${nextSig.signerEmail}:`, err);
         });
@@ -506,6 +509,7 @@ export async function declineSignature(token: string, reason?: string) {
       declinedAt: new Date(),
       reason,
       documentUrl: `${env.APP_URL}/documents/${doc.id}`,
+      locale: doc.emailLocale || 'en', // Use document's email language
     }).catch((err) => {
       console.error(`[email] Failed to send decline notification:`, err);
     });
@@ -558,6 +562,7 @@ export async function remindSigner(documentId: string, signatureId: string, user
     documentTitle: document.title,
     signingUrl: `${env.APP_URL}/en/sign/${sig.token}`,
     expiresAt: sig.tokenExpiresAt,
+    locale: document.emailLocale || 'en', // Use document's email language
   });
 
   await prisma.signature.update({

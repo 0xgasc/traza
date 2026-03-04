@@ -17,7 +17,39 @@ interface DocumentCompletedProps {
   completedAt: Date;
   totalSigners: number;
   downloadUrl: string;
+  locale?: string;
 }
+
+const translations = {
+  en: {
+    preview: (documentTitle: string) => `"${documentTitle}" has been fully signed`,
+    statusBadge: 'COMPLETED',
+    heading: 'Document fully signed',
+    greeting: (recipientName: string) => `Hi ${recipientName},`,
+    body: (totalSigners: number, documentTitle: string) =>
+      `All ${totalSigners} signer${totalSigners > 1 ? 's have' : ' has'} signed "${documentTitle}". The document is now complete.`,
+    document: 'Document:',
+    completed: 'Completed:',
+    signers: 'Signers:',
+    button: 'DOWNLOAD SIGNED DOCUMENT',
+    note: 'A cryptographic proof of signing has been generated. You can verify document integrity at any time from your dashboard.',
+    footer: 'Powered by Traza — Contracts, signed with proof.',
+  },
+  es: {
+    preview: (documentTitle: string) => `"${documentTitle}" ha sido firmado completamente`,
+    statusBadge: 'COMPLETADO',
+    heading: 'Documento firmado completamente',
+    greeting: (recipientName: string) => `Hola ${recipientName},`,
+    body: (totalSigners: number, documentTitle: string) =>
+      `${totalSigners > 1 ? 'Todos los' : 'El'} ${totalSigners} firmante${totalSigners > 1 ? 's han' : ' ha'} firmado "${documentTitle}". El documento está ahora completo.`,
+    document: 'Documento:',
+    completed: 'Completado:',
+    signers: 'Firmantes:',
+    button: 'DESCARGAR DOCUMENTO FIRMADO',
+    note: 'Se ha generado una prueba criptográfica de la firma. Puedes verificar la integridad del documento en cualquier momento desde tu panel.',
+    footer: 'Desarrollado por Traza — Contratos firmados con prueba.',
+  },
+};
 
 export function DocumentCompleted({
   recipientName,
@@ -25,13 +57,22 @@ export function DocumentCompleted({
   completedAt,
   totalSigners,
   downloadUrl,
+  locale = 'en',
 }: DocumentCompletedProps) {
+  const t = translations[locale as keyof typeof translations] || translations.en;
+  const formattedDate = completedAt.toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
   return (
     <Html>
       <Head />
-      <Preview>
-        &ldquo;{documentTitle}&rdquo; has been fully signed
-      </Preview>
+      <Preview>{t.preview(documentTitle)}</Preview>
       <Body style={styles.body}>
         <Container style={styles.container}>
           <Section style={styles.header}>
@@ -40,58 +81,42 @@ export function DocumentCompleted({
 
           <Section style={styles.content}>
             <Section style={styles.statusBadge}>
-              <Text style={styles.statusText}>COMPLETED</Text>
+              <Text style={styles.statusText}>{t.statusBadge}</Text>
             </Section>
 
             <Heading as="h2" style={styles.heading}>
-              Document fully signed
+              {t.heading}
             </Heading>
 
-            <Text style={styles.text}>Hi {recipientName},</Text>
+            <Text style={styles.text}>{t.greeting(recipientName)}</Text>
 
-            <Text style={styles.text}>
-              All {totalSigners} signer{totalSigners > 1 ? 's have' : ' has'}{' '}
-              signed &ldquo;{documentTitle}&rdquo;. The document is now complete.
-            </Text>
+            <Text style={styles.text}>{t.body(totalSigners, documentTitle)}</Text>
 
             <Section style={styles.detailsBox}>
               <Text style={styles.detailRow}>
-                <strong>Document:</strong> {documentTitle}
+                <strong>{t.document}</strong> {documentTitle}
               </Text>
               <Text style={styles.detailRow}>
-                <strong>Completed:</strong>{' '}
-                {completedAt.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                <strong>{t.completed}</strong> {formattedDate}
               </Text>
               <Text style={styles.detailRow}>
-                <strong>Signers:</strong> {totalSigners}
+                <strong>{t.signers}</strong> {totalSigners}
               </Text>
             </Section>
 
             <Section style={styles.buttonSection}>
               <Button href={downloadUrl} style={styles.button}>
-                DOWNLOAD SIGNED DOCUMENT
+                {t.button}
               </Button>
             </Section>
 
             <Hr style={styles.hr} />
 
-            <Text style={styles.note}>
-              A cryptographic proof of signing has been generated. You can verify
-              document integrity at any time from your dashboard.
-            </Text>
+            <Text style={styles.note}>{t.note}</Text>
           </Section>
 
           <Section style={styles.footer}>
-            <Text style={styles.footerText}>
-              Powered by Traza &mdash; Contracts, signed with proof.
-            </Text>
+            <Text style={styles.footerText}>{t.footer}</Text>
           </Section>
         </Container>
       </Body>

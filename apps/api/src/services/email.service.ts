@@ -57,6 +57,7 @@ export async function sendSignatureRequestEmail(params: {
   message?: string;
   locale?: string; // Language for email content (en, es)
 }) {
+  const locale = params.locale || 'en';
   const html = await render(
     SignatureRequest({
       recipientName: params.recipientName,
@@ -65,12 +66,19 @@ export async function sendSignatureRequestEmail(params: {
       signingUrl: params.signingUrl,
       expiresAt: params.expiresAt,
       message: params.message,
+      locale,
     }),
   );
 
+  // Localized email subjects
+  const subjects = {
+    en: `${params.senderName} sent you a document to sign`,
+    es: `${params.senderName} te envió un documento para firmar`,
+  };
+
   await sendEmail(
     params.to,
-    `${params.senderName} sent you a document to sign`,
+    subjects[locale as keyof typeof subjects] || subjects.en,
     html,
   );
 }
@@ -84,6 +92,7 @@ export async function sendDocumentCompletedEmail(params: {
   downloadUrl: string;
   locale?: string; // Language for email content (en, es)
 }) {
+  const locale = params.locale || 'en';
   const html = await render(
     DocumentCompleted({
       recipientName: params.recipientName,
@@ -91,12 +100,19 @@ export async function sendDocumentCompletedEmail(params: {
       completedAt: params.completedAt,
       totalSigners: params.totalSigners,
       downloadUrl: params.downloadUrl,
+      locale,
     }),
   );
 
+  // Localized email subjects
+  const subjects = {
+    en: `"${params.documentTitle}" has been fully signed`,
+    es: `"${params.documentTitle}" ha sido firmado completamente`,
+  };
+
   await sendEmail(
     params.to,
-    `"${params.documentTitle}" has been fully signed`,
+    subjects[locale as keyof typeof subjects] || subjects.en,
     html,
   );
 }
@@ -110,6 +126,7 @@ export async function sendReminderEmail(params: {
   expiresAt: Date;
   locale?: string; // Language for email content (en, es)
 }) {
+  const locale = params.locale || 'en';
   const html = await render(
     Reminder({
       recipientName: params.recipientName,
@@ -117,12 +134,19 @@ export async function sendReminderEmail(params: {
       documentTitle: params.documentTitle,
       signingUrl: params.signingUrl,
       expiresAt: params.expiresAt,
+      locale,
     }),
   );
 
+  // Localized email subjects
+  const subjects = {
+    en: `Reminder: "${params.documentTitle}" needs your signature`,
+    es: `Recordatorio: "${params.documentTitle}" necesita tu firma`,
+  };
+
   await sendEmail(
     params.to,
-    `Reminder: "${params.documentTitle}" needs your signature`,
+    subjects[locale as keyof typeof subjects] || subjects.en,
     html,
   );
 }
@@ -159,7 +183,9 @@ export async function sendSignatureDeclinedEmail(params: {
   declinedAt: Date;
   reason?: string;
   documentUrl: string;
+  locale?: string; // Language for email content (en, es)
 }) {
+  const locale = params.locale || 'en';
   const html = await render(
     SignatureDeclined({
       recipientName: params.recipientName,
@@ -169,12 +195,19 @@ export async function sendSignatureDeclinedEmail(params: {
       declinedAt: params.declinedAt,
       reason: params.reason,
       documentUrl: params.documentUrl,
+      locale,
     }),
   );
 
+  // Localized email subjects
+  const subjects = {
+    en: `${params.signerName} declined to sign "${params.documentTitle}"`,
+    es: `${params.signerName} rechazó firmar "${params.documentTitle}"`,
+  };
+
   await sendEmail(
     params.to,
-    `${params.signerName} declined to sign "${params.documentTitle}"`,
+    subjects[locale as keyof typeof subjects] || subjects.en,
     html,
   );
 }

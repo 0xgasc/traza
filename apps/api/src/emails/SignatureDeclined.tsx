@@ -19,7 +19,43 @@ interface SignatureDeclinedProps {
   declinedAt: Date;
   reason?: string;
   documentUrl: string;
+  locale?: string;
 }
+
+const translations = {
+  en: {
+    preview: (signerName: string, documentTitle: string) =>
+      `${signerName} declined to sign "${documentTitle}"`,
+    statusBadge: 'DECLINED',
+    heading: 'A signer declined',
+    greeting: (recipientName: string) => `Hi ${recipientName},`,
+    body: (signerName: string, signerEmail: string, documentTitle: string) =>
+      `${signerName} (${signerEmail}) has declined to sign "${documentTitle}". The document remains in pending status but this signer will not complete their signature.`,
+    reasonLabel: 'REASON PROVIDED',
+    document: 'Document:',
+    declinedBy: 'Declined by:',
+    declinedAt: 'Declined at:',
+    button: 'VIEW DOCUMENT',
+    note: 'You may void this document and start over, or reach out to the signer directly to resolve any concerns.',
+    footer: 'Powered by Traza — Contracts, signed with proof.',
+  },
+  es: {
+    preview: (signerName: string, documentTitle: string) =>
+      `${signerName} rechazó firmar "${documentTitle}"`,
+    statusBadge: 'RECHAZADO',
+    heading: 'Un firmante rechazó',
+    greeting: (recipientName: string) => `Hola ${recipientName},`,
+    body: (signerName: string, signerEmail: string, documentTitle: string) =>
+      `${signerName} (${signerEmail}) ha rechazado firmar "${documentTitle}". El documento permanece en estado pendiente pero este firmante no completará su firma.`,
+    reasonLabel: 'RAZÓN PROPORCIONADA',
+    document: 'Documento:',
+    declinedBy: 'Rechazado por:',
+    declinedAt: 'Rechazado en:',
+    button: 'VER DOCUMENTO',
+    note: 'Puedes anular este documento y comenzar de nuevo, o contactar directamente al firmante para resolver cualquier inquietud.',
+    footer: 'Desarrollado por Traza — Contratos firmados con prueba.',
+  },
+};
 
 export function SignatureDeclined({
   recipientName,
@@ -29,13 +65,21 @@ export function SignatureDeclined({
   declinedAt,
   reason,
   documentUrl,
+  locale = 'en',
 }: SignatureDeclinedProps) {
+  const t = translations[locale as keyof typeof translations] || translations.en;
+  const formattedDate = declinedAt.toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
   return (
     <Html>
       <Head />
-      <Preview>
-        {signerName} declined to sign &ldquo;{documentTitle}&rdquo;
-      </Preview>
+      <Preview>{t.preview(signerName, documentTitle)}</Preview>
       <Body style={styles.body}>
         <Container style={styles.container}>
           <Section style={styles.header}>
@@ -44,66 +88,51 @@ export function SignatureDeclined({
 
           <Section style={styles.content}>
             <Section style={styles.statusBadge}>
-              <Text style={styles.statusText}>DECLINED</Text>
+              <Text style={styles.statusText}>{t.statusBadge}</Text>
             </Section>
 
             <Heading as="h2" style={styles.heading}>
-              A signer declined
+              {t.heading}
             </Heading>
 
-            <Text style={styles.text}>Hi {recipientName},</Text>
+            <Text style={styles.text}>{t.greeting(recipientName)}</Text>
 
             <Text style={styles.text}>
-              <strong>{signerName}</strong> ({signerEmail}) has declined to sign
-              &ldquo;{documentTitle}&rdquo;. The document remains in pending status
-              but this signer will not complete their signature.
+              <strong>{t.body(signerName, signerEmail, documentTitle)}</strong>
             </Text>
 
             {reason && (
               <Section style={styles.reasonBox}>
-                <Text style={styles.reasonLabel}>REASON PROVIDED</Text>
+                <Text style={styles.reasonLabel}>{t.reasonLabel}</Text>
                 <Text style={styles.reasonText}>&ldquo;{reason}&rdquo;</Text>
               </Section>
             )}
 
             <Section style={styles.detailsBox}>
               <Text style={styles.detailRow}>
-                <strong>Document:</strong> {documentTitle}
+                <strong>{t.document}</strong> {documentTitle}
               </Text>
               <Text style={styles.detailRow}>
-                <strong>Declined by:</strong> {signerName} &lt;{signerEmail}&gt;
+                <strong>{t.declinedBy}</strong> {signerName} &lt;{signerEmail}&gt;
               </Text>
               <Text style={styles.detailRow}>
-                <strong>Declined at:</strong>{' '}
-                {declinedAt.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                <strong>{t.declinedAt}</strong> {formattedDate}
               </Text>
             </Section>
 
             <Section style={styles.buttonSection}>
               <Button href={documentUrl} style={styles.button}>
-                VIEW DOCUMENT
+                {t.button}
               </Button>
             </Section>
 
             <Hr style={styles.hr} />
 
-            <Text style={styles.note}>
-              You may void this document and start over, or reach out to the signer
-              directly to resolve any concerns.
-            </Text>
+            <Text style={styles.note}>{t.note}</Text>
           </Section>
 
           <Section style={styles.footer}>
-            <Text style={styles.footerText}>
-              Powered by Traza &mdash; Contracts, signed with proof.
-            </Text>
+            <Text style={styles.footerText}>{t.footer}</Text>
           </Section>
         </Container>
       </Body>

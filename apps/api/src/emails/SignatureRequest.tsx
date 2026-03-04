@@ -18,7 +18,37 @@ interface SignatureRequestProps {
   signingUrl: string;
   expiresAt: Date;
   message?: string;
+  locale?: string;
 }
+
+const translations = {
+  en: {
+    preview: (senderName: string, documentTitle: string) =>
+      `${senderName} sent you "${documentTitle}" for your signature`,
+    heading: 'You have a document to sign',
+    greeting: (recipientName: string) => `Hi ${recipientName},`,
+    body: (senderName: string, documentTitle: string) =>
+      `${senderName} has sent you "${documentTitle}" for your signature.`,
+    messageLabel: 'Message from sender:',
+    button: 'REVIEW AND SIGN',
+    expires: (date: string) => `This request expires on ${date}.`,
+    ignore: "If you didn't expect this email, you can safely ignore it.",
+    footer: 'Powered by Traza — Contracts, signed with proof.',
+  },
+  es: {
+    preview: (senderName: string, documentTitle: string) =>
+      `${senderName} te envió "${documentTitle}" para tu firma`,
+    heading: 'Tienes un documento para firmar',
+    greeting: (recipientName: string) => `Hola ${recipientName},`,
+    body: (senderName: string, documentTitle: string) =>
+      `${senderName} te ha enviado "${documentTitle}" para tu firma.`,
+    messageLabel: 'Mensaje del remitente:',
+    button: 'REVISAR Y FIRMAR',
+    expires: (date: string) => `Esta solicitud expira el ${date}.`,
+    ignore: 'Si no esperabas este correo, puedes ignorarlo con seguridad.',
+    footer: 'Desarrollado por Traza — Contratos firmados con prueba.',
+  },
+};
 
 export function SignatureRequest({
   recipientName,
@@ -27,13 +57,20 @@ export function SignatureRequest({
   signingUrl,
   expiresAt,
   message,
+  locale = 'en',
 }: SignatureRequestProps) {
+  const t = translations[locale as keyof typeof translations] || translations.en;
+  const formattedDate = expiresAt.toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
   return (
     <Html>
       <Head />
-      <Preview>
-        {senderName} sent you &ldquo;{documentTitle}&rdquo; for your signature
-      </Preview>
+      <Preview>{t.preview(senderName, documentTitle)}</Preview>
       <Body style={styles.body}>
         <Container style={styles.container}>
           <Section style={styles.header}>
@@ -42,51 +79,37 @@ export function SignatureRequest({
 
           <Section style={styles.content}>
             <Heading as="h2" style={styles.heading}>
-              You have a document to sign
+              {t.heading}
             </Heading>
 
-            <Text style={styles.text}>Hi {recipientName},</Text>
+            <Text style={styles.text}>{t.greeting(recipientName)}</Text>
 
             <Text style={styles.text}>
-              <strong>{senderName}</strong> has sent you &ldquo;
-              {documentTitle}&rdquo; for your signature.
+              <strong>{t.body(senderName, documentTitle)}</strong>
             </Text>
 
             {message && (
               <Section style={styles.messageBox}>
-                <Text style={styles.messageLabel}>Message from sender:</Text>
+                <Text style={styles.messageLabel}>{t.messageLabel}</Text>
                 <Text style={styles.messageText}>{message}</Text>
               </Section>
             )}
 
             <Section style={styles.buttonSection}>
               <Button href={signingUrl} style={styles.button}>
-                REVIEW AND SIGN
+                {t.button}
               </Button>
             </Section>
 
             <Hr style={styles.hr} />
 
-            <Text style={styles.details}>
-              This request expires on{' '}
-              {expiresAt.toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-              .
-            </Text>
+            <Text style={styles.details}>{t.expires(formattedDate)}</Text>
 
-            <Text style={styles.details}>
-              If you didn&apos;t expect this email, you can safely ignore it.
-            </Text>
+            <Text style={styles.details}>{t.ignore}</Text>
           </Section>
 
           <Section style={styles.footer}>
-            <Text style={styles.footerText}>
-              Powered by Traza &mdash; Contracts, signed with proof.
-            </Text>
+            <Text style={styles.footerText}>{t.footer}</Text>
           </Section>
         </Container>
       </Body>
