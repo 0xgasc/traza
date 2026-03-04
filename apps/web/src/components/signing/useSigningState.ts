@@ -19,6 +19,7 @@ export function useSigningState(fields: FieldPosition[], initialValues?: Record<
   const [values, setValues] = useState<Record<string, string>>(initialValues ?? {});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [documentCompleted, setDocumentCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const setFieldValue = useCallback((fieldId: string, value: string) => {
@@ -64,6 +65,8 @@ export function useSigningState(fields: FieldPosition[], initialValues?: Record<
           throw new Error(data.message || 'Failed to submit signature.');
         }
 
+        const data = await res.json();
+        setDocumentCompleted(data.documentCompleted ?? false);
         setSubmitted(true);
       } catch (err: unknown) {
         const msg =
@@ -85,6 +88,7 @@ export function useSigningState(fields: FieldPosition[], initialValues?: Record<
     submit,
     submitting,
     submitted,
+    documentCompleted,
     error,
   };
 }

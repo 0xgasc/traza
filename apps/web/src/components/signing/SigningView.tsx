@@ -60,12 +60,19 @@ export default function SigningView({
     submit,
     submitting,
     submitted,
+    documentCompleted,
     error,
   } = useSigningState(fields, initialValues);
 
   const [pageDimensions, setPageDimensions] = useState<
     Record<number, { width: number; height: number }>
   >({});
+
+  const [documentDetails, setDocumentDetails] = useState<{
+    downloadUrl?: string;
+    arweaveUrl?: string;
+    blockchainTxHash?: string;
+  } | null>(null);
 
   // We use a MutationObserver-style approach: measure page overlay containers
   const overlayRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -130,6 +137,29 @@ export default function SigningView({
   const handleSubmit = async () => {
     await submit(token);
   };
+
+  // Fetch document details after successful submission if document is completed
+  useEffect(() => {
+    if (submitted && documentCompleted && !documentDetails) {
+      fetch(`https://traza-api-production.up.railway.app/api/v1/sign/${token}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.document?.blockchainTxHash) {
+            const arweaveUrl = `https://devnet.irys.xyz/${data.document.blockchainTxHash}`;
+            setDocumentDetails({
+              downloadUrl: `/api/v1/sign/${token}/pdf`,
+              arweaveUrl,
+              blockchainTxHash: data.document.blockchainTxHash,
+            });
+          } else {
+            setDocumentDetails({
+              downloadUrl: `/api/v1/sign/${token}/pdf`,
+            });
+          }
+        })
+        .catch((err) => console.error('[SigningView] Failed to fetch document details:', err));
+    }
+  }, [submitted, documentCompleted, token, documentDetails]);
 
   // --- Next Field navigation ---
   // Build a stable list of required fields sorted by page, then y, then x
@@ -198,11 +228,35 @@ export default function SigningView({
             You have successfully signed the document. All fields have been
             submitted.
           </p>
-          <div className="p-4 bg-green-100 border-4 border-green-400">
+          <div className="p-4 bg-green-100 border-4 border-green-400 mb-6">
             <p className="font-semibold uppercase text-green-800 text-sm">
               DOCUMENT SIGNED SUCCESSFULLY
             </p>
           </div>
+
+          {documentCompleted && documentDetails && (
+            <div className="space-y-4">
+              {documentDetails.downloadUrl && (
+                <a
+                  href={`https://traza-api-production.up.railway.app${documentDetails.downloadUrl}`}
+                  download
+                  className="block w-full px-6 py-3 font-bold uppercase text-sm tracking-wide border-4 border-black bg-black text-white hover:bg-stone-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+                >
+                  ⬇ DOWNLOAD SIGNED DOCUMENT
+                </a>
+              )}
+              {documentDetails.arweaveUrl && (
+                <a
+                  href={documentDetails.arweaveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full px-6 py-3 font-bold uppercase text-xs tracking-wide border-4 border-black bg-blue-500 text-white hover:bg-blue-600 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+                >
+                  🔗 VIEW ON ARWEAVE (PERMANENT STORAGE)
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
