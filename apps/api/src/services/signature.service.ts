@@ -395,6 +395,26 @@ export async function submitSignature(
       console.error('[cc] Failed to notify CC recipients:', err);
     });
 
+    // Generate signed PDF with all signatures overlaid (fire and forget)
+    const { generateSignedPdf } = await import('./pdfGenerator.service.js');
+    generateSignedPdf(payload.documentId)
+      .then(async (signedPdfBuffer) => {
+        // Save signed PDF to storage
+        const storageKey = `signed-pdfs/${payload.documentId}.pdf`;
+        await storage.uploadFile(signedPdfBuffer, storageKey, 'application/pdf');
+
+        // Update document with signed PDF URL
+        await prisma.document.update({
+          where: { id: payload.documentId },
+          data: { pdfFileUrl: storageKey },
+        });
+
+        console.log(`[pdfGenerator] Generated and saved signed PDF for document ${payload.documentId}`);
+      })
+      .catch((err) => {
+        console.error('[pdfGenerator] Failed to generate signed PDF:', err);
+      });
+
     // Auto-anchor to Arweave (fire and forget — never blocks signing completion)
     anchorDocumentToArweave(payload.documentId).catch((err) => {
       console.error('[arweave] Auto-anchor failed:', err);

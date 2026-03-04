@@ -133,7 +133,9 @@ export async function getDownloadUrl(id: string, userId: string) {
     throw new AppError(404, 'NOT_FOUND', 'Document not found');
   }
 
-  const downloadUrl = await storage.generatePresignedUrl(document.fileUrl);
+  // Use signed PDF if available, otherwise use original
+  const fileKey = document.pdfFileUrl || document.fileUrl;
+  const downloadUrl = await storage.generatePresignedUrl(fileKey);
 
   // Log access
   await prisma.auditLog.create({
