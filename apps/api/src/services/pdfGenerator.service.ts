@@ -61,11 +61,16 @@ export async function generateSignedPdf(documentId: string): Promise<Buffer> {
 
     const { height: pageHeight } = page.getSize();
 
-    // Convert percentage positions to points
-    const x = (field.positionX / 100) * page.getWidth();
-    const y = pageHeight - ((field.positionY / 100) * pageHeight) - ((field.height / 100) * pageHeight); // Flip Y coordinate
-    const width = (field.width / 100) * page.getWidth();
-    const height = (field.height / 100) * pageHeight;
+    // Convert Decimal to number and percentage positions to points
+    const posX = typeof field.positionX === 'number' ? field.positionX : Number(field.positionX);
+    const posY = typeof field.positionY === 'number' ? field.positionY : Number(field.positionY);
+    const w = typeof field.width === 'number' ? field.width : Number(field.width);
+    const h = typeof field.height === 'number' ? field.height : Number(field.height);
+
+    const x = (posX / 100) * page.getWidth();
+    const y = pageHeight - ((posY / 100) * pageHeight) - ((h / 100) * pageHeight); // Flip Y coordinate
+    const width = (w / 100) * page.getWidth();
+    const height = (h / 100) * pageHeight;
 
     await overlayField(pdfDoc, page, field.fieldType, field.fieldValue.value, x, y, width, height);
   }

@@ -5,6 +5,7 @@ import { getEnv } from '../config/env.js';
 import { sendSignatureRequestEmail, sendDocumentCompletedEmail, sendReminderEmail, sendSignatureDeclinedEmail } from './email.service.js';
 import { dispatchEvent } from './webhookDispatcher.js';
 import { anchorDocumentToArweave } from './arweave.service.js';
+import * as storage from './storage.service.js';
 
 interface SignerInput {
   email: string;
