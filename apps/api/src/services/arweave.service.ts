@@ -95,7 +95,7 @@ export async function anchorDocumentToArweave(
       where: { id: documentId },
       data: {
         blockchainTxHash: txId,
-        blockchainNetwork: 'arweave',
+        blockchainNetwork: 'arweave-devnet', // Changed from 'arweave' to match devnet usage
       },
     });
 
@@ -105,7 +105,7 @@ export async function anchorDocumentToArweave(
         eventType: 'document.anchored',
         metadata: {
           txId,
-          network: 'arweave',
+          network: 'arweave-devnet', // Changed from 'arweave' to match devnet usage
           url,
           fileHash: document.fileHash,
           fileSize: buffer.length,
