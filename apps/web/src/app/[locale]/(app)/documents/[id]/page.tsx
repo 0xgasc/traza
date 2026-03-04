@@ -63,6 +63,7 @@ export default function DocumentDetailPage() {
   const [actionLoading, setActionLoading] = useState("");
   const [remindingId, setRemindingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; ok: boolean } | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const showToast = (message: string, ok = true) => {
     setToast({ message, ok });
@@ -257,16 +258,6 @@ export default function DocumentDetailPage() {
         </Link>
       </div>
 
-      {/* Document Hash */}
-      <div className="card shadow-brutal mb-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-500 mb-3">
-          {t("documentHash")}
-        </h2>
-        <p className="font-mono text-sm bg-stone-100 p-3 border-2 border-stone-200 break-all">
-          {documentHash}
-        </p>
-      </div>
-
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3 mb-8">
         <button
@@ -291,25 +282,6 @@ export default function DocumentDetailPage() {
             <Link href={sendHref} className="btn">
               {t("sendForSigning")}
             </Link>
-          </>
-        )}
-
-        {doc.status === "SIGNED" && (
-          <>
-            <button
-              onClick={() => handleAction("certificate")}
-              disabled={actionLoading !== ""}
-              className="btn"
-            >
-              {actionLoading === "certificate" ? "..." : t("certificate")}
-            </button>
-            <button
-              onClick={() => handleAction("proof")}
-              disabled={actionLoading !== ""}
-              className="btn-secondary"
-            >
-              {actionLoading === "proof" ? "..." : t("downloadProof")}
-            </button>
           </>
         )}
 
@@ -343,23 +315,110 @@ export default function DocumentDetailPage() {
             {actionLoading === "resend" ? t("creating") : t("resendCopy")}
           </button>
         )}
+      </div>
 
+      {/* Advanced Verifications Section */}
+      <div className="mb-8">
         <button
-          onClick={() => handleAction("verify")}
-          disabled={actionLoading !== ""}
-          className="btn-secondary"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-stone-600 hover:text-black transition-colors"
         >
-          {actionLoading === "verify" ? "..." : t("verifyIntegrity")}
+          <span className={`transform transition-transform ${showAdvanced ? "rotate-90" : ""}`}>▶</span>
+          {t("advancedVerifications")}
         </button>
 
-        {!doc.blockchainTxHash && (doc.status === "SIGNED" || doc.status === "PENDING") && (
-          <button
-            onClick={() => handleAction("anchor")}
-            disabled={actionLoading !== ""}
-            className="btn-secondary"
-          >
-            {actionLoading === "anchor" ? "..." : t("anchorBlockchain")}
-          </button>
+        {showAdvanced && (
+          <div className="mt-4 border-4 border-black bg-white p-6 shadow-brutal">
+            {/* Document Hash */}
+            <div className="mb-6">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-2">
+                {t("documentHash")}
+              </h3>
+              <p className="font-mono text-sm bg-stone-100 p-3 border-2 border-stone-200 break-all">
+                {documentHash}
+              </p>
+            </div>
+
+            {/* Blockchain Anchor Info */}
+            {doc.blockchainTxHash && (
+              <div className="mb-6 pb-6 border-b-2 border-stone-200">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-3">
+                  {t("blockchainAnchor")}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-stone-400 mb-1">
+                      {t("transactionHash")}
+                    </p>
+                    {doc.blockchainNetwork === "arweave" || doc.blockchainNetwork === "arweave-devnet" ? (
+                      <a
+                        href={
+                          doc.blockchainNetwork === "arweave-devnet"
+                            ? `https://devnet.irys.xyz/${doc.blockchainTxHash}`
+                            : `https://arweave.net/${doc.blockchainTxHash}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-sm break-all underline hover:text-stone-600"
+                      >
+                        {doc.blockchainTxHash}
+                      </a>
+                    ) : (
+                      <p className="font-mono text-sm break-all">
+                        {doc.blockchainTxHash}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-stone-400 mb-1">
+                      {t("network")}
+                    </p>
+                    <p className="font-mono text-sm">{doc.blockchainNetwork || "polygon"}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => handleAction("verify")}
+                disabled={actionLoading !== ""}
+                className="btn-secondary"
+              >
+                {actionLoading === "verify" ? "..." : t("verifyIntegrity")}
+              </button>
+
+              {!doc.blockchainTxHash && (doc.status === "SIGNED" || doc.status === "PENDING") && (
+                <button
+                  onClick={() => handleAction("anchor")}
+                  disabled={actionLoading !== ""}
+                  className="btn-secondary"
+                >
+                  {actionLoading === "anchor" ? "..." : t("anchorBlockchain")}
+                </button>
+              )}
+
+              {doc.status === "SIGNED" && (
+                <>
+                  <button
+                    onClick={() => handleAction("certificate")}
+                    disabled={actionLoading !== ""}
+                    className="btn"
+                  >
+                    {actionLoading === "certificate" ? "..." : t("certificate")}
+                  </button>
+                  <button
+                    onClick={() => handleAction("proof")}
+                    disabled={actionLoading !== ""}
+                    className="btn-secondary"
+                  >
+                    {actionLoading === "proof" ? "..." : t("downloadProof")}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         )}
       </div>
 
@@ -440,48 +499,6 @@ export default function DocumentDetailPage() {
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* Blockchain / Arweave Anchor Info */}
-      {doc.blockchainTxHash && (
-        <div className="mb-8">
-          <h2 className="text-xl font-bold uppercase tracking-tight mb-4">
-            {t("blockchainAnchor")}
-          </h2>
-          <div className="card shadow-brutal">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">
-                  {t("transactionHash")}
-                </p>
-                {doc.blockchainNetwork === "arweave" || doc.blockchainNetwork === "arweave-devnet" ? (
-                  <a
-                    href={
-                      doc.blockchainNetwork === "arweave-devnet"
-                        ? `https://devnet.irys.xyz/${doc.blockchainTxHash}`
-                        : `https://arweave.net/${doc.blockchainTxHash}`
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-mono text-sm break-all underline hover:text-stone-600"
-                  >
-                    {doc.blockchainTxHash}
-                  </a>
-                ) : (
-                  <p className="font-mono text-sm break-all">
-                    {doc.blockchainTxHash}
-                  </p>
-                )}
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">
-                  {t("network")}
-                </p>
-                <p className="font-mono text-sm">{doc.blockchainNetwork || "polygon"}</p>
-              </div>
-            </div>
           </div>
         </div>
       )}

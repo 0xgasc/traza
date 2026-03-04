@@ -339,33 +339,17 @@ export default function PreparePage() {
       />
 
       {/* Action Buttons */}
-      <div className="mt-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleSave}
-            disabled={saveStatus === 'saving'}
-            className={[
-              'px-6 py-3 border-4 border-black font-bold text-sm uppercase tracking-widest transition-all',
-              'shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]',
-              'active:shadow-none active:translate-x-1 active:translate-y-1',
-              saveStatus === 'saving'
-                ? 'bg-stone-300 text-stone-500 cursor-wait'
-                : 'bg-white text-black hover:bg-stone-100',
-            ].join(' ')}
-          >
-            {saveStatus === 'saving' ? t('saving') : t('save')}
-          </button>
-          {saveStatus === 'saved' && (
-            <span className="text-sm font-semibold text-green-600 uppercase tracking-wide">
-              {t('saved')}
-            </span>
-          )}
-          {saveStatus === 'error' && (
-            <span className="text-sm font-semibold text-red-600 uppercase tracking-wide">
-              {t('saveFailed')}
-            </span>
-          )}
-        </div>
+      <div className="mt-6 flex items-center justify-end gap-3">
+        {saveStatus === 'saved' && (
+          <span className="text-sm font-semibold text-green-600 uppercase tracking-wide">
+            {t('saved')}
+          </span>
+        )}
+        {saveStatus === 'error' && (
+          <span className="text-sm font-semibold text-red-600 uppercase tracking-wide">
+            {t('saveFailed')}
+          </span>
+        )}
         <button
           onClick={handleSaveAndContinue}
           disabled={saveStatus === 'saving'}
