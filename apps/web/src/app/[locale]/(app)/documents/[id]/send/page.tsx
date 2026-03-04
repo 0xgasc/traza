@@ -3,7 +3,7 @@
 import { useState, useEffect, FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Link } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { apiGet, apiPost } from "@/lib/api";
 
 interface Signer {
@@ -22,6 +22,7 @@ interface FieldData {
 
 export default function SendForSigningPage() {
   const t = useTranslations("send");
+  const locale = useLocale();
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
@@ -30,6 +31,7 @@ export default function SendForSigningPage() {
   const [message, setMessage] = useState("");
   const [expiresInDays, setExpiresInDays] = useState("7");
   const [sequential, setSequential] = useState(false);
+  const [emailLocale, setEmailLocale] = useState(locale); // Language for email notifications
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -131,6 +133,7 @@ export default function SendForSigningPage() {
         })),
         message: message.trim() || undefined,
         expiresInDays: parseInt(expiresInDays, 10),
+        emailLocale: emailLocale, // Pass selected language for emails
       });
       const validCc = ccRecipients.filter((cc) => cc.email.trim() && cc.name.trim());
       if (validCc.length > 0) {
@@ -327,6 +330,22 @@ export default function SendForSigningPage() {
             <option value="60">{t("days60")}</option>
             <option value="90">{t("days90")}</option>
           </select>
+        </div>
+
+        {/* Email Language */}
+        <div>
+          <label className="block text-sm font-semibold uppercase tracking-wide mb-2">
+            {t("emailLanguage")}
+          </label>
+          <select
+            value={emailLocale}
+            onChange={(e) => setEmailLocale(e.target.value)}
+            className="input"
+          >
+            <option value="en">English</option>
+            <option value="es">Español</option>
+          </select>
+          <p className="mt-1 text-xs font-mono text-stone-400">{t("emailLanguageHint")}</p>
         </div>
 
         {/* CC Recipients */}

@@ -306,6 +306,8 @@
     "days30": "30 Days",
     "days60": "60 Days",
     "days90": "90 Days",
+    "emailLanguage": "Email Language",
+    "emailLanguageHint": "Language for email notifications sent to signers",
     "sendButtonSeq": " (sequential)",
     "sending": "Sending...",
     "validationError": "At least one signer with name and email is required."

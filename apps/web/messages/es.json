@@ -306,6 +306,8 @@
     "days30": "30 Días",
     "days60": "60 Días",
     "days90": "90 Días",
+    "emailLanguage": "Idioma de Correos",
+    "emailLanguageHint": "Idioma para las notificaciones por correo enviadas a los firmantes",
     "sendButtonSeq": " (secuencial)",
     "sending": "Enviando...",
     "validationError": "Se requiere al menos un firmante con nombre y correo."

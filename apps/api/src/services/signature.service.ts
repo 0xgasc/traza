@@ -19,6 +19,7 @@ interface SendForSigningInput {
   signers: SignerInput[];
   message?: string;
   expiresInDays?: number;
+  emailLocale?: string; // Language for email notifications (en, es)
 }
 
 export async function sendForSigning({
@@ -26,6 +27,7 @@ export async function sendForSigning({
   userId,
   signers,
   expiresInDays = 7,
+  emailLocale = 'en',
 }: SendForSigningInput) {
   const document = await prisma.document.findUnique({ where: { id: documentId } });
 
@@ -95,10 +97,10 @@ export async function sendForSigning({
     });
   }
 
-  // Update document status
+  // Update document status and email locale
   await prisma.document.update({
     where: { id: documentId },
-    data: { status: 'PENDING', expiresAt },
+    data: { status: 'PENDING', expiresAt, emailLocale },
   });
 
   // Audit log

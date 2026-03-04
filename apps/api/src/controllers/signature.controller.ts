@@ -10,6 +10,7 @@ export async function sendForSigning(req: Request, res: Response, next: NextFunc
       signers: req.body.signers,
       message: req.body.message,
       expiresInDays: req.body.expiresInDays,
+      emailLocale: req.body.emailLocale || 'en', // Default to English if not provided
     });
 
     created(res, result);

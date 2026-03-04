@@ -207,6 +207,7 @@ model Document {
   blockchainNetwork String?
   voidedAt          DateTime?
   voidReason        String?
+  emailLocale       String?        @default("en") // Language for email notifications (en, es)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
