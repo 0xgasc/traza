@@ -466,45 +466,50 @@ export default function DocumentsPage() {
                         {doc._count?.signatures ?? 0}
                       </td>
                       <td className="px-4 py-3 text-right relative">
-                        <div ref={actionOpenId === doc.id ? dropdownRef : null}>
-                          <button
-                            onClick={() =>
-                              setActionOpenId(actionOpenId === doc.id ? null : doc.id)
-                            }
-                            className="px-3 py-1 border-2 border-black text-xs font-semibold uppercase hover:bg-black hover:text-white transition-colors"
+                        {doc.status === "DRAFT" ? (
+                          <div ref={actionOpenId === doc.id ? dropdownRef : null}>
+                            <button
+                              onClick={() =>
+                                setActionOpenId(actionOpenId === doc.id ? null : doc.id)
+                              }
+                              className="px-3 py-1 border-2 border-black text-xs font-semibold uppercase hover:bg-black hover:text-white transition-colors"
+                            >
+                              Actions
+                            </button>
+                            {actionOpenId === doc.id && (
+                              <div className="absolute right-0 top-full mt-1 z-10 bg-white border-4 border-black shadow-brutal min-w-[160px]">
+                                <Link
+                                  href={viewHref}
+                                  className="block px-4 py-2 text-sm font-semibold hover:bg-stone-100 uppercase text-left"
+                                  onClick={() => setActionOpenId(null)}
+                                >
+                                  {t("view")}
+                                </Link>
+                                <Link
+                                  href={prepareHref}
+                                  className="block px-4 py-2 text-sm font-semibold hover:bg-stone-100 uppercase text-left border-t-2 border-stone-200"
+                                  onClick={() => setActionOpenId(null)}
+                                >
+                                  {t("prepare")}
+                                </Link>
+                                <Link
+                                  href={sendHref}
+                                  className="block px-4 py-2 text-sm font-semibold hover:bg-stone-100 uppercase text-left border-t-2 border-stone-200"
+                                  onClick={() => setActionOpenId(null)}
+                                >
+                                  {t("send")}
+                                </Link>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <Link
+                            href={viewHref}
+                            className="px-3 py-1 border-2 border-black text-xs font-semibold uppercase hover:bg-black hover:text-white transition-colors inline-block"
                           >
-                            Actions
-                          </button>
-                          {actionOpenId === doc.id && (
-                            <div className="absolute right-0 top-full mt-1 z-10 bg-white border-4 border-black shadow-brutal min-w-[160px]">
-                              <Link
-                                href={viewHref}
-                                className="block px-4 py-2 text-sm font-semibold hover:bg-stone-100 uppercase text-left"
-                                onClick={() => setActionOpenId(null)}
-                              >
-                                {t("view")}
-                              </Link>
-                              {doc.status === "DRAFT" && (
-                                <>
-                                  <Link
-                                    href={prepareHref}
-                                    className="block px-4 py-2 text-sm font-semibold hover:bg-stone-100 uppercase text-left border-t-2 border-stone-200"
-                                    onClick={() => setActionOpenId(null)}
-                                  >
-                                    {t("prepare")}
-                                  </Link>
-                                  <Link
-                                    href={sendHref}
-                                    className="block px-4 py-2 text-sm font-semibold hover:bg-stone-100 uppercase text-left border-t-2 border-stone-200"
-                                    onClick={() => setActionOpenId(null)}
-                                  >
-                                    {t("send")}
-                                  </Link>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                            {t("view")}
+                          </Link>
+                        )}
                       </td>
                     </tr>
                   );
