@@ -396,7 +396,7 @@ export async function submitSignature(
       console.error('[cc] Failed to notify CC recipients:', err);
     });
 
-    // Generate signed PDF with all signatures overlaid (fire and forget)
+    // Generate signed PDF with all signatures overlaid, then anchor to Arweave (fire and forget)
     const { generateSignedPdf } = await import('./pdfGenerator.service.js');
     generateSignedPdf(payload.documentId)
       .then(async (signedPdfBuffer) => {
@@ -411,15 +411,13 @@ export async function submitSignature(
         });
 
         console.log(`[pdfGenerator] Generated and saved signed PDF for document ${payload.documentId}`);
+
+        // Now anchor the SIGNED PDF to Arweave (after it's ready)
+        return anchorDocumentToArweave(payload.documentId);
       })
       .catch((err) => {
-        console.error('[pdfGenerator] Failed to generate signed PDF:', err);
+        console.error('[pdfGenerator/arweave] Failed:', err);
       });
-
-    // Auto-anchor to Arweave (fire and forget — never blocks signing completion)
-    anchorDocumentToArweave(payload.documentId).catch((err) => {
-      console.error('[arweave] Auto-anchor failed:', err);
-    });
   } else {
     // Sequential signing: notify the next group of pending signers
     const pendingSignatures = allSignatures.filter((s) => s.status === 'PENDING');
