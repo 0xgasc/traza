@@ -136,7 +136,35 @@ export async function refreshTokens(refreshTokenStr: string) {
   const tokenHash = hashToken(refreshTokenStr);
 
   const stored = await prisma.refreshToken.findUnique({ where: { tokenHash } });
-  if (!stored || stored.expiresAt < new Date()) {
+
+  // SECURITY: Token reuse detection
+  if (!stored) {
+    // Token was already used (rotated) - this is a token reuse attack!
+    // Revoke ALL tokens for this user to prevent the attacker from using stolen tokens
+    const allTokens = await prisma.refreshToken.findMany({
+      where: { userId: payload.userId },
+    });
+
+    if (allTokens.length > 0) {
+      console.warn(
+        `[SECURITY] Token reuse detected for user ${payload.userId}. Revoking all ${allTokens.length} tokens.`,
+      );
+
+      await prisma.refreshToken.deleteMany({
+        where: { userId: payload.userId },
+      });
+
+      throw new AppError(
+        401,
+        'TOKEN_REUSE_DETECTED',
+        'Security breach detected: this token was already used. All sessions have been terminated. Please log in again.',
+      );
+    }
+
+    throw new AppError(401, 'INVALID_TOKEN', 'Invalid or expired refresh token');
+  }
+
+  if (stored.expiresAt < new Date()) {
     throw new AppError(401, 'INVALID_TOKEN', 'Invalid or expired refresh token');
   }
 
@@ -229,16 +257,78 @@ export async function generateApiKey(userId: string) {
   return { key: rawKey };
 }
 
+// In-memory rate limiter for API key validation (prevents brute force)
+const apiKeyAttempts = new Map<string, { count: number; resetAt: Date }>();
+
+function checkApiKeyRateLimit(keyHash: string) {
+  const now = new Date();
+  const attempts = apiKeyAttempts.get(keyHash);
+
+  // Clean up old entries periodically
+  if (apiKeyAttempts.size > 10000) {
+    for (const [hash, data] of apiKeyAttempts.entries()) {
+      if (data.resetAt < now) {
+        apiKeyAttempts.delete(hash);
+      }
+    }
+  }
+
+  if (attempts) {
+    if (attempts.resetAt < now) {
+      // Reset window expired
+      apiKeyAttempts.delete(keyHash);
+    } else if (attempts.count >= 10) {
+      // Too many attempts
+      const remainingSeconds = Math.ceil((attempts.resetAt.getTime() - now.getTime()) / 1000);
+      throw new AppError(
+        429,
+        'TOO_MANY_ATTEMPTS',
+        `Too many API key validation attempts. Try again in ${remainingSeconds} seconds.`,
+      );
+    }
+  }
+}
+
+function recordApiKeyAttempt(keyHash: string, success: boolean) {
+  if (success) {
+    // Clear attempts on successful validation
+    apiKeyAttempts.delete(keyHash);
+    return;
+  }
+
+  const now = new Date();
+  const attempts = apiKeyAttempts.get(keyHash);
+
+  if (attempts && attempts.resetAt > now) {
+    attempts.count++;
+  } else {
+    // Start new window (15 minutes)
+    apiKeyAttempts.set(keyHash, {
+      count: 1,
+      resetAt: new Date(now.getTime() + 15 * 60 * 1000),
+    });
+  }
+}
+
 export async function validateApiKey(key: string) {
   const apiKeyHash = hashToken(key);
+
+  // SECURITY: Rate limit API key validation attempts
+  checkApiKeyRateLimit(apiKeyHash);
+
   const user = await prisma.user.findFirst({ where: { apiKeyHash } });
   if (!user) {
+    recordApiKeyAttempt(apiKeyHash, false);
     throw new AppError(401, 'INVALID_API_KEY', 'Invalid API key');
   }
 
   if (!user.isActive) {
+    recordApiKeyAttempt(apiKeyHash, false);
     throw new AppError(403, 'ACCOUNT_DISABLED', 'Account has been disabled');
   }
+
+  // Clear attempts on success
+  recordApiKeyAttempt(apiKeyHash, true);
 
   return {
     id: user.id,

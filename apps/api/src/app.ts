@@ -41,11 +41,21 @@ app.use(
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
+        // SECURITY: Restricted image sources to prevent tracking and data exfiltration
+        // Only allow self-hosted images, data URIs, and specific trusted CDNs
+        imgSrc: [
+          "'self'",
+          'data:',
+          'blob:',
+          // Add specific trusted domains as needed (e.g., CDNs, S3 buckets)
+          process.env.S3_ENDPOINT || '',
+          'https://*.amazonaws.com', // If using AWS S3
+        ].filter(Boolean),
         connectSrc: ["'self'", process.env.APP_URL || 'http://localhost:3000'],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
         frameSrc: ["'none'"],
+        upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
       },
     },
     hsts: {

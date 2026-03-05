@@ -270,6 +270,30 @@ export async function submitSignature(
     }
   }
 
+  // SECURITY: Validate all field IDs belong to this document before processing
+  if (fieldValues && fieldValues.length > 0) {
+    const fieldIds = fieldValues.map((fv) => fv.fieldId);
+    const documentFields = await prisma.documentField.findMany({
+      where: {
+        id: { in: fieldIds },
+        documentId: payload.documentId,
+        signerEmail: signature.signerEmail,
+      },
+      select: { id: true },
+    });
+
+    const validFieldIds = new Set(documentFields.map((f) => f.id));
+    const invalidFields = fieldIds.filter((id) => !validFieldIds.has(id));
+
+    if (invalidFields.length > 0) {
+      throw new AppError(
+        400,
+        'INVALID_FIELDS',
+        `Invalid field IDs: ${invalidFields.join(', ')}. Fields must belong to this document and signer.`,
+      );
+    }
+  }
+
   // Use a transaction to update signature and create field values atomically
   await prisma.$transaction(async (tx) => {
     // Update signature
@@ -613,6 +637,15 @@ export async function getDocumentSignatures(documentId: string, userId: string) 
 export async function delegateSignature(token: string, newEmail: string, newName: string) {
   const payload = verifySigningToken(token);
 
+  // Validate email format
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(newEmail)) {
+    throw new AppError(400, 'INVALID_EMAIL', 'Invalid email address format');
+  }
+
+  // Normalize email to lowercase
+  newEmail = newEmail.toLowerCase();
+
   const signature = await prisma.signature.findUnique({
     where: { token },
     include: {
@@ -630,6 +663,11 @@ export async function delegateSignature(token: string, newEmail: string, newName
     throw new AppError(410, 'EXPIRED', 'This signing link has expired');
   }
 
+  // Prevent delegation to the same email
+  if (newEmail === signature.signerEmail.toLowerCase()) {
+    throw new AppError(400, 'INVALID_DELEGATION', 'Cannot delegate to the same email address');
+  }
+
   const env = getEnv();
   const expiresAt = signature.document.expiresAt ?? signature.tokenExpiresAt;
 
@@ -638,6 +676,10 @@ export async function delegateSignature(token: string, newEmail: string, newName
     { signatureId: signature.id, documentId: payload.documentId, signerEmail: newEmail },
     Math.ceil((expiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)),
   );
+
+  // Store original signer info before updating
+  const originalEmail = signature.signerEmail;
+  const originalName = signature.signerName;
 
   // Update the signature with the delegate's info
   await prisma.signature.update({
@@ -659,18 +701,31 @@ export async function delegateSignature(token: string, newEmail: string, newName
       documentId: payload.documentId,
       eventType: 'document.delegated',
       metadata: {
-        from: signature.signerEmail,
+        from: originalEmail,
         to: newEmail,
-        originalSignerName: signature.signerName,
+        originalSignerName: originalName,
+        delegatedToName: newName,
+        timestamp: new Date().toISOString(),
       },
     },
   });
 
-  // Get owner name for email
+  // Get owner info for notifications
   const owner = await prisma.user.findUnique({
     where: { id: signature.document.ownerId ?? '' },
-    select: { name: true },
+    select: { name: true, email: true },
   });
+
+  // SECURITY: Notify document owner about delegation
+  if (owner?.email) {
+    sendEmail({
+      to: owner.email,
+      subject: `Signature delegated: ${signature.document.title}`,
+      html: `<p>The signer <strong>${originalName} (${originalEmail})</strong> has delegated their signature to <strong>${newName} (${newEmail})</strong> for the document "${signature.document.title}".</p>`,
+    }).catch((err) => {
+      console.error(`[email] Failed to notify owner ${owner.email}:`, err);
+    });
+  }
 
   // Send email to the new delegate
   sendSignatureRequestEmail({
@@ -694,11 +749,35 @@ export async function verifyAccessCode(token: string, code: string) {
     throw new AppError(404, 'NOT_FOUND', 'Signature not found');
   }
 
+  // SECURITY FIX: If no access code is set, this endpoint shouldn't be called
+  // Return an error to prevent bypass
   if (!signature.accessCode) {
-    return { verified: true }; // no access code required
+    throw new AppError(400, 'NO_CODE_REQUIRED', 'No access code required for this signature');
   }
 
-  if (signature.accessCode !== code) {
+  if (!code || code.trim() === '') {
+    throw new AppError(400, 'CODE_REQUIRED', 'Access code is required');
+  }
+
+  // Constant-time comparison to prevent timing attacks
+  if (signature.accessCode.length !== code.length) {
+    throw new AppError(403, 'INVALID_CODE', 'Incorrect access code');
+  }
+
+  // Use crypto.timingSafeEqual for constant-time comparison
+  const crypto = await import('crypto');
+  const accessCodeBuffer = Buffer.from(signature.accessCode, 'utf8');
+  const codeBuffer = Buffer.from(code, 'utf8');
+
+  let isValid = false;
+  try {
+    isValid = crypto.timingSafeEqual(accessCodeBuffer, codeBuffer);
+  } catch {
+    // Length mismatch or other error
+    isValid = false;
+  }
+
+  if (!isValid) {
     throw new AppError(403, 'INVALID_CODE', 'Incorrect access code');
   }
 
