@@ -17,6 +17,7 @@ interface FieldPosition {
   heightPercent: number;
   required?: boolean;
   signerEmail?: string;
+  checkboxStyle?: string;
 }
 
 interface SignableFieldProps {
@@ -95,6 +96,7 @@ export default function SignableField({
             onFill={handleFill}
             label={field.label}
             disabled={disabled}
+            checkboxStyle={field.checkboxStyle}
           />
         );
       default:

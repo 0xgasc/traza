@@ -4,6 +4,8 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 
 interface SignatureCaptureProps {
   onComplete: (signatureData: string) => void;
+  width?: number; // Optional width in pixels
+  height?: number; // Optional height in pixels
 }
 
 type TabMode = "draw" | "type";
@@ -24,7 +26,7 @@ const SIGNATURE_FONTS: FontOption[] = [
 const GOOGLE_FONTS_URL =
   "https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=La+Belle+Aurore&family=Caveat:wght@700&family=Pacifico&display=swap";
 
-export default function SignatureCapture({ onComplete }: SignatureCaptureProps) {
+export default function SignatureCapture({ onComplete, width, height }: SignatureCaptureProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
@@ -179,7 +181,8 @@ export default function SignatureCapture({ onComplete }: SignatureCaptureProps) 
           <div>
             <canvas
               ref={canvasRef}
-              className="w-full h-48 border-3 border-black cursor-crosshair touch-none"
+              className="w-full border-3 border-black cursor-crosshair touch-none"
+              style={width || height ? { width: width ? `${width}px` : '100%', height: height ? `${height}px` : '192px' } : {}}
               onMouseDown={startDrawing}
               onMouseMove={draw}
               onMouseUp={stopDrawing}

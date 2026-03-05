@@ -6,6 +6,7 @@ interface CheckboxFieldInputProps {
   onFill: (value: string) => void;
   label?: string;
   disabled?: boolean;
+  checkboxStyle?: string; // 'check' or 'x'
 }
 
 export default function CheckboxFieldInput({
@@ -14,8 +15,10 @@ export default function CheckboxFieldInput({
   onFill,
   label,
   disabled = false,
+  checkboxStyle = 'x', // Default to 'x' for backward compatibility
 }: CheckboxFieldInputProps) {
   const isChecked = value === 'true';
+  const checkmarkSymbol = checkboxStyle === 'check' ? '✓' : 'X';
 
   const handleToggle = () => {
     if (disabled) return;
@@ -52,7 +55,7 @@ export default function CheckboxFieldInput({
         }`}
       >
         {isChecked && (
-          <span className="text-white font-bold text-lg leading-none">X</span>
+          <span className="text-white font-bold text-lg leading-none">{checkmarkSymbol}</span>
         )}
       </div>
       {label && (
