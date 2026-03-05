@@ -10,6 +10,7 @@ export interface FieldPosition {
   signerName?: string;
   required: boolean;
   label?: string;
+  checkboxStyle?: string; // 'check' or 'x'
   order: number;
 }
 

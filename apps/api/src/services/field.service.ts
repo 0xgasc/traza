@@ -13,6 +13,7 @@ interface FieldInput {
   height: number;
   required: boolean;
   label?: string;
+  checkboxStyle?: string;
   order: number;
 }
 
@@ -68,6 +69,7 @@ export async function saveDocumentFields(
         height: field.height,
         required: field.required,
         label: field.label ?? null,
+        checkboxStyle: field.checkboxStyle ?? null,
         order: field.order,
       })),
     });
@@ -113,5 +115,6 @@ export async function getSignerFields(token: string) {
     heightPercent: field.height,
     required: field.required,
     signerEmail: field.signerEmail,
+    checkboxStyle: field.checkboxStyle,
   }));
 }

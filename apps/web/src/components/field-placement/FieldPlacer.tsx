@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import PdfViewer from '@/components/pdf/PdfViewer';
 import FieldToolbar from './FieldToolbar';
 import PlacedField from './PlacedField';
+import FieldPropertiesPanel from './FieldPropertiesPanel';
 import { useFieldPlacement } from './useFieldPlacement';
 import type { FieldPosition } from '@/components/pdf/types';
 
@@ -144,6 +145,8 @@ export default function FieldPlacer({
     );
   }
 
+  const selectedField = fields.find((f) => f.id === selectedFieldId) || null;
+
   return (
     <div className="flex h-[calc(100vh-12rem)] border-4 border-black">
       <FieldToolbar
@@ -156,7 +159,7 @@ export default function FieldPlacer({
         saving={saving}
         isDirty={isDirty}
       />
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         <PdfViewer
           pdfUrl={pdfUrl}
           scale={scale}
@@ -164,6 +167,11 @@ export default function FieldPlacer({
           renderOverlay={renderOverlayWithDimensions}
           className="h-full"
           authToken={authToken}
+        />
+        <FieldPropertiesPanel
+          field={selectedField}
+          onUpdate={updateField}
+          onClose={() => setSelectedFieldId(null)}
         />
       </div>
     </div>

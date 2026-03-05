@@ -85,6 +85,7 @@ export function useFieldPlacement(documentId: string, fieldsEndpoint?: string): 
         signerName: f.signerName,
         required: f.required ?? true,
         label: f.label,
+        checkboxStyle: f.checkboxStyle,
         order: f.order ?? 0,
       }));
       setFields(mapped);
@@ -110,6 +111,7 @@ export function useFieldPlacement(documentId: string, fieldsEndpoint?: string): 
         signerEmail,
         signerName,
         required: true,
+        checkboxStyle: fieldType === 'CHECKBOX' ? 'x' : undefined,
         order: orderCounter.current++,
       };
       setFields((prev) => [...prev, newField]);
