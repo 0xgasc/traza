@@ -67,17 +67,17 @@ export default function LandingPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center tracking-tight">
             {t("howItWorks.heading")}
           </h2>
-          <div className="grid md:grid-cols-3 gap-0">
+          <div className="grid md:grid-cols-3 gap-4 md:gap-0">
             {(["step1", "step2", "step3"] as const).map((step, i) => (
               <div
                 key={step}
-                className={`p-8 border-4 border-black ${i > 0 ? "md:border-l-0" : ""} bg-white`}
+                className={`p-6 md:p-8 border-4 border-black ${i > 0 ? "md:border-l-0" : ""} bg-white`}
               >
                 <span className="font-mono text-sm text-stone-400 block mb-2">
                   {t(`howItWorks.${step}.num`)}
                 </span>
-                <h3 className="text-2xl font-bold mb-2">{t(`howItWorks.${step}.title`)}</h3>
-                <p className="text-stone-600">{t(`howItWorks.${step}.desc`)}</p>
+                <h3 className="text-xl md:text-2xl font-bold mb-2">{t(`howItWorks.${step}.title`)}</h3>
+                <p className="text-sm md:text-base text-stone-600">{t(`howItWorks.${step}.desc`)}</p>
               </div>
             ))}
           </div>
