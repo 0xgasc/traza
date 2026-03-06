@@ -226,6 +226,9 @@ model Document {
   @@index([ownerId, status])
   @@index([organizationId, status])
   @@index([createdById])
+  @@index([status, createdAt])
+  @@index([ownerId, createdAt])
+  @@index([organizationId, createdAt])
 }
 
 model Signature {
@@ -260,6 +263,9 @@ model Signature {
 
   @@index([documentId])
   @@index([signerUserId])
+  @@index([documentId, status])
+  @@index([signerEmail])
+  @@index([status, createdAt])
 }
 
 model AuditLog {
@@ -391,6 +397,8 @@ model DocumentField {
 
   @@index([documentId])
   @@index([signatureId])
+  @@index([documentId, page])
+  @@index([signerEmail])
 }
 
 model FieldValue {

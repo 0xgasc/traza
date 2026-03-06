@@ -52,6 +52,8 @@ router.get('/sign/:token/pdf', async (req, res, next) => {
             id: true,
             pdfFileUrl: true,
             fileUrl: true,
+            fileHash: true,
+            updatedAt: true,
           },
         },
       },
@@ -67,13 +69,27 @@ router.get('/sign/:token/pdf', async (req, res, next) => {
 
     const fileKey = signature.document.pdfFileUrl || signature.document.fileUrl;
 
+    // Generate ETag from file hash
+    const etag = `"${signature.document.fileHash}"`;
+    const clientETag = req.headers['if-none-match'];
+
+    // Check if client has cached version
+    if (clientETag === etag) {
+      return res.status(304).end();
+    }
+
     // Proxy file through the API (works for both local storage and S3/MinIO)
     const buffer = await storage.getFileBuffer(fileKey);
     if (!buffer) throw new AppError(404, 'NOT_FOUND', 'Document file not found');
 
     const meta = await storage.getFileMetadata(fileKey);
+
+    // Set aggressive caching headers since PDFs don't change (immutable content)
     res.setHeader('Content-Type', meta?.contentType || 'application/pdf');
     res.setHeader('Content-Length', buffer.length);
+    res.setHeader('ETag', etag);
+    res.setHeader('Cache-Control', 'private, max-age=3600, immutable');
+    res.setHeader('Last-Modified', signature.document.updatedAt.toUTCString());
     res.send(buffer);
   } catch (err) {
     next(err);
@@ -122,9 +138,21 @@ router.get('/sign/:token/branding', async (req, res, next) => {
     const payload = verifySigningToken(req.params.token!);
     const doc = await prisma.document.findUnique({
       where: { id: payload.documentId },
-      include: { owner: { select: { brandingLogoUrl: true, brandingColor: true, name: true } } },
+      select: {
+        owner: {
+          select: {
+            brandingLogoUrl: true,
+            brandingColor: true,
+            name: true,
+          },
+        },
+      },
     });
     const branding = (doc?.owner as { brandingLogoUrl?: string; brandingColor?: string; name?: string } | null) ?? {};
+
+    // Set caching headers - branding rarely changes
+    res.setHeader('Cache-Control', 'private, max-age=300'); // 5 minutes
+
     res.json({
       logoUrl: branding.brandingLogoUrl ?? null,
       primaryColor: branding.brandingColor ?? null,

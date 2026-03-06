@@ -435,7 +435,7 @@ export async function submitSignature(
       console.error('[cc] Failed to notify CC recipients:', err);
     });
 
-    // Generate signed PDF with all signatures overlaid, then anchor to Arweave (fire and forget)
+    // Generate signed PDF with all signatures overlaid, certificate, then anchor to Arweave (fire and forget)
     const { generateSignedPdf } = await import('./pdfGenerator.service.js');
     generateSignedPdf(payload.documentId)
       .then(async (signedPdfBuffer) => {
@@ -450,6 +450,12 @@ export async function submitSignature(
         });
 
         console.log(`[pdfGenerator] Generated and saved signed PDF for document ${payload.documentId}`);
+
+        // Generate Certificate of Completion
+        const { saveCertificateToDocument } = await import('./certificate.service.js');
+        await saveCertificateToDocument(payload.documentId).catch((err) => {
+          console.error('[certificate] Failed to generate certificate:', err);
+        });
 
         // Now anchor the SIGNED PDF to Arweave (after it's ready)
         return anchorDocumentToArweave(payload.documentId);
@@ -494,7 +500,12 @@ export async function submitSignature(
   };
 }
 
-export async function declineSignature(token: string, reason?: string) {
+export async function declineSignature(
+  token: string,
+  reason?: string,
+  ipAddress?: string | null,
+  userAgent?: string | null
+) {
   const payload = verifySigningToken(token);
 
   const signature = await prisma.signature.findUnique({ where: { token } });
@@ -515,6 +526,8 @@ export async function declineSignature(token: string, reason?: string) {
     data: {
       documentId: payload.documentId,
       eventType: 'document.declined',
+      ipAddress: ipAddress || undefined,
+      userAgent: userAgent || undefined,
       metadata: { signerEmail: signature.signerEmail, reason },
     },
   });

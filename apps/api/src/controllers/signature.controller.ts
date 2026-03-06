@@ -47,7 +47,12 @@ export async function submitSignature(req: Request, res: Response, next: NextFun
 
 export async function declineSignature(req: Request, res: Response, next: NextFunction) {
   try {
-    const result = await signatureService.declineSignature(req.params.token as string, req.body.reason);
+    const result = await signatureService.declineSignature(
+      req.params.token as string,
+      req.body.reason,
+      req.ip || null,
+      req.headers['user-agent'] || null
+    );
     success(res, result);
   } catch (err) {
     next(err);
