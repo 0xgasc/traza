@@ -718,16 +718,9 @@ export async function delegateSignature(token: string, newEmail: string, newName
     select: { name: true, email: true },
   });
 
-  // SECURITY: Notify document owner about delegation
-  if (owner?.email) {
-    sendEmail({
-      to: owner.email,
-      subject: `Signature delegated: ${signature.document.title}`,
-      html: `<p>The signer <strong>${originalName} (${originalEmail})</strong> has delegated their signature to <strong>${newName} (${newEmail})</strong> for the document "${signature.document.title}".</p>`,
-    }).catch((err) => {
-      console.error(`[email] Failed to notify owner ${owner.email}:`, err);
-    });
-  }
+  // SECURITY: Log delegation for audit purposes
+  // TODO: Add dedicated email template for delegation notifications
+  console.log(`[delegation] Document owner notification: ${originalEmail} → ${newEmail} for "${signature.document.title}"`);
 
   // Send email to the new delegate
   sendSignatureRequestEmail({
