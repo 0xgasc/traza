@@ -27,9 +27,9 @@ RUN pnpm --filter @traza/database build && \
     pnpm --filter @traza/crypto build && \
     pnpm --filter @traza/api build
 
-# Compile the migration script to JS (before pruning devDeps removes tsc)
-RUN packages/database/node_modules/.bin/tsc packages/database/prisma/migrations/migrate-to-organizations.ts \
-    --outDir packages/database/prisma/migrations \
+# Compile migration scripts to JS (before pruning devDeps removes tsc)
+RUN packages/database/node_modules/.bin/tsc packages/database/prisma/migrations/migrate-to-organizations.ts packages/database/prisma/promote-admin.ts \
+    --outDir packages/database/prisma \
     --target ES2017 \
     --module commonjs \
     --lib ES2017 \
@@ -59,4 +59,4 @@ RUN mkdir -p /app/.local-storage && chown -R traza:nodejs /app/.local-storage
 USER traza
 EXPOSE 4000
 # Run DB migrations then start server (migrations are idempotent/safe on every deploy)
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema packages/database/prisma/schema.prisma && (node packages/database/prisma/migrations/migrate-to-organizations.js || echo 'Org migration skipped') && node apps/api/dist/server.js"]
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema packages/database/prisma/schema.prisma && (node packages/database/prisma/migrations/migrate-to-organizations.js || echo 'Org migration skipped') && (node packages/database/prisma/promote-admin.js || echo 'Admin promotion skipped') && node apps/api/dist/server.js"]
