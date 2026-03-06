@@ -120,7 +120,11 @@ export default function SignableField({
 
   return (
     <div
-      className={`absolute group ${disabled ? 'opacity-50 pointer-events-none' : ''} ${isFilled ? 'ring-2 ring-green-500/50' : ''}`}
+      className={`absolute group transition-all duration-200 ease-out ${
+        disabled ? 'opacity-50 pointer-events-none' : 'hover:scale-[1.02]'
+      } ${
+        isFilled ? 'ring-2 ring-green-500/50' : 'hover:ring-2 hover:ring-black/20'
+      }`}
       style={{
         left: `${left}px`,
         top: `${top}px`,
@@ -137,9 +141,9 @@ export default function SignableField({
         </div>
       )}
       {isFilled && filledBy && (
-        <div className="absolute -top-4 left-0 z-10">
-          <span className="text-[8px] font-bold uppercase tracking-wider text-green-700 bg-green-100 border border-green-300 px-1.5 py-0.5 rounded flex items-center gap-1">
-            <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+        <div className="absolute -top-4 left-0 z-10 animate-in slide-in-from-left-2 duration-300">
+          <span className="text-[8px] font-bold uppercase tracking-wider text-green-700 bg-green-100 border border-green-300 px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm">
+            <svg className="w-2.5 h-2.5 animate-in zoom-in duration-200 delay-150" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
             {filledBy}

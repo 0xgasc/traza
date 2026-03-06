@@ -228,18 +228,20 @@ export default function SigningView({
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
-        <div className="bg-white border-4 border-black p-8 max-w-lg w-full text-center shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-          <h1 className="text-2xl font-bold tracking-tighter uppercase mb-4">
-            SIGNATURE COMPLETE
-          </h1>
-          <p className="text-stone-600 mb-6">
+      <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4 animate-in fade-in duration-500">
+        <div className="bg-white border-4 border-black p-6 sm:p-8 max-w-lg w-full text-center shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] animate-in zoom-in duration-300">
+          <div className="animate-in slide-in-from-top duration-500 delay-100">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tighter uppercase mb-4">
+              SIGNATURE COMPLETE
+            </h1>
+          </div>
+          <p className="text-sm sm:text-base text-stone-600 mb-6 animate-in fade-in duration-500 delay-200">
             You have successfully signed the document. All fields have been
             submitted.
           </p>
-          <div className="p-4 bg-green-100 border-4 border-green-400 mb-6">
-            <p className="font-semibold uppercase text-green-800 text-sm">
-              DOCUMENT SIGNED SUCCESSFULLY
+          <div className="p-4 bg-green-100 border-4 border-green-400 mb-6 animate-in zoom-in duration-300 delay-300">
+            <p className="font-semibold uppercase text-green-800 text-xs sm:text-sm">
+              ✓ DOCUMENT SIGNED SUCCESSFULLY
             </p>
           </div>
 
@@ -328,18 +330,19 @@ export default function SigningView({
     <div className="min-h-screen bg-stone-100 flex flex-col">
       {/* Progress bar */}
       <div className="sticky top-0 z-40 bg-white border-b-4 border-black">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="font-bold uppercase text-sm tracking-wide">
+        <div className="max-w-4xl mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <h1 className="font-bold uppercase text-xs sm:text-sm tracking-wide">
               TRAZA
             </h1>
-            <span className="text-xs font-mono text-stone-500">
+            <span className="hidden sm:inline text-xs font-mono text-stone-500">
               E-SIGNATURE
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold uppercase tracking-wide text-stone-600">
-              {filledCount} OF {totalRequired} FIELDS
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-stone-600">
+              <span className="hidden xs:inline">{filledCount} OF {totalRequired} FIELDS</span>
+              <span className="xs:hidden">{filledCount}/{totalRequired}</span>
             </span>
           </div>
         </div>
@@ -363,55 +366,64 @@ export default function SigningView({
 
       {/* Bottom action bar */}
       <div className="sticky bottom-0 z-40 bg-white border-t-4 border-black">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          {/* Decline / Delegate links */}
-          <div className="flex items-center gap-4 flex-shrink-0">
-            {onDecline && (
-              <button
-                onClick={onDecline}
-                className="text-xs font-bold uppercase tracking-wide text-stone-400 hover:text-black transition-colors underline"
-              >
-                Decline
-              </button>
-            )}
-            {onDelegate && (
-              <button
-                onClick={onDelegate}
-                className="text-xs font-bold uppercase tracking-wide text-blue-400 hover:text-blue-700 transition-colors underline"
-              >
-                Delegate
-              </button>
-            )}
-          </div>
-
+        <div className="max-w-4xl mx-auto px-2 sm:px-4 py-2 sm:py-4">
+          {/* Error message - full width on mobile */}
           {error && (
-            <div className="flex-1 p-2 border-2 border-black bg-stone-100">
+            <div className="mb-2 p-2 border-2 border-black bg-stone-100">
               <p className="text-xs font-semibold text-red-600">{error}</p>
             </div>
           )}
-          {!error && <div className="flex-1" />}
 
-          {/* Next Field navigation button */}
-          {unfilledRequired.length > 0 && (
-            <button
-              onClick={handleNextField}
-              className="px-6 py-3 font-bold uppercase text-sm tracking-wide border-4 border-black bg-yellow-300 text-black hover:bg-yellow-400 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
-            >
-              NEXT: FIELD {(currentFieldIndex % unfilledRequired.length) + 1} OF{' '}
-              {unfilledRequired.length}
-            </button>
-          )}
-          <button
-            onClick={handleSubmit}
-            disabled={!allRequiredFilled || submitting}
-            className={`px-8 py-3 font-bold uppercase text-sm tracking-wide transition-colors border-4 border-black ${
-              allRequiredFilled && !submitting
-                ? 'bg-black text-white hover:bg-stone-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1'
-                : 'bg-stone-200 text-stone-400 cursor-not-allowed'
-            }`}
-          >
-            {submitting ? 'SUBMITTING...' : 'SUBMIT SIGNATURE'}
-          </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-4">
+            {/* Decline / Delegate links */}
+            <div className="flex items-center justify-center sm:justify-start gap-3 sm:gap-4 order-3 sm:order-1">
+              {onDecline && (
+                <button
+                  onClick={onDecline}
+                  className="text-xs font-bold uppercase tracking-wide text-stone-400 hover:text-black transition-colors underline"
+                >
+                  Decline
+                </button>
+              )}
+              {onDelegate && (
+                <button
+                  onClick={onDelegate}
+                  className="text-xs font-bold uppercase tracking-wide text-blue-400 hover:text-blue-700 transition-colors underline"
+                >
+                  Delegate
+                </button>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch gap-2 order-1 sm:order-2">
+              {/* Next Field navigation button */}
+              {unfilledRequired.length > 0 && (
+                <button
+                  onClick={handleNextField}
+                  className="px-4 sm:px-6 py-2 sm:py-3 font-bold uppercase text-xs sm:text-sm tracking-wide border-4 border-black bg-yellow-300 text-black hover:bg-yellow-400 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all whitespace-nowrap"
+                >
+                  <span className="hidden sm:inline">
+                    NEXT: FIELD {(currentFieldIndex % unfilledRequired.length) + 1} OF {unfilledRequired.length}
+                  </span>
+                  <span className="sm:hidden">
+                    NEXT ({(currentFieldIndex % unfilledRequired.length) + 1}/{unfilledRequired.length})
+                  </span>
+                </button>
+              )}
+              <button
+                onClick={handleSubmit}
+                disabled={!allRequiredFilled || submitting}
+                className={`px-6 sm:px-8 py-2 sm:py-3 font-bold uppercase text-xs sm:text-sm tracking-wide transition-colors border-4 border-black whitespace-nowrap ${
+                  allRequiredFilled && !submitting
+                    ? 'bg-black text-white hover:bg-stone-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1'
+                    : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                }`}
+              >
+                {submitting ? 'SUBMITTING...' : <><span className="hidden sm:inline">SUBMIT SIGNATURE</span><span className="sm:hidden">SUBMIT</span></>}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
