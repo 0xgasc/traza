@@ -28,7 +28,7 @@ RUN pnpm --filter @traza/database build && \
     pnpm --filter @traza/api build
 
 # Compile the migration script to JS (before pruning devDeps removes tsc)
-RUN npx tsc packages/database/prisma/migrations/migrate-to-organizations.ts \
+RUN node_modules/.bin/tsc packages/database/prisma/migrations/migrate-to-organizations.ts \
     --outDir packages/database/prisma/migrations \
     --module commonjs \
     --esModuleInterop \
