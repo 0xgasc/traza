@@ -320,18 +320,18 @@ export async function generateCertificateOfCompletion(documentId: string): Promi
  * Save certificate to storage and link it to the document
  */
 export async function saveCertificateToDocument(documentId: string): Promise<string> {
-  const { saveFile } = await import('./storage.service.js');
+  const { uploadFile } = await import('./storage.service.js');
 
   // Generate certificate
   const certificateBuffer = await generateCertificateOfCompletion(documentId);
 
   // Save to storage
   const fileName = `certificate-${documentId}.pdf`;
-  const certificateUrl = await saveFile(certificateBuffer, fileName, 'application/pdf');
+  const certificateKey = await uploadFile(certificateBuffer, fileName, 'application/pdf');
 
   // Update document with certificate URL (we'll add this field in schema later if needed)
-  // For now, we'll just return the URL
-  console.log(`[certificate] Generated certificate for document ${documentId}: ${certificateUrl}`);
+  // For now, we'll just return the key
+  console.log(`[certificate] Generated certificate for document ${documentId}: ${certificateKey}`);
 
-  return certificateUrl;
+  return certificateKey;
 }

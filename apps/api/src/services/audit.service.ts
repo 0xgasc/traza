@@ -78,7 +78,7 @@ export async function createAuditLog(options: AuditLogOptions) {
       resourceId,
       ipAddress: finalIpAddress,
       userAgent: finalUserAgent,
-      metadata,
+      metadata: metadata as any, // Prisma JsonValue type
     },
   });
 }
@@ -91,13 +91,15 @@ function extractIpAddress(req: Request): string | undefined {
   const forwarded = req.headers['x-forwarded-for'];
   if (forwarded) {
     // Take the first IP if multiple are present
-    return typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : forwarded[0];
+    const ip = typeof forwarded === 'string' ? forwarded.split(',')[0]?.trim() : (Array.isArray(forwarded) ? forwarded[0] : undefined);
+    return ip || undefined;
   }
 
   // Check X-Real-IP header (used by some proxies)
   const realIp = req.headers['x-real-ip'];
   if (realIp) {
-    return typeof realIp === 'string' ? realIp : realIp[0];
+    const ip = typeof realIp === 'string' ? realIp : (Array.isArray(realIp) ? realIp[0] : undefined);
+    return ip || undefined;
   }
 
   // Fallback to direct connection IP
@@ -208,7 +210,9 @@ export async function getAuditStatistics(organizationId: string, days = 30) {
   const dailyCounts = logs.reduce(
     (acc, log) => {
       const date = log.timestamp.toISOString().split('T')[0];
-      acc[date] = (acc[date] || 0) + 1;
+      if (date) {
+        acc[date] = (acc[date] || 0) + 1;
+      }
       return acc;
     },
     {} as Record<string, number>

@@ -292,7 +292,7 @@ export default function SigningView({
             const isCurrentSigner = field.isCurrentSigner !== false;
             const isHighlighted = highlightFieldId === field.id;
             // Use pre-filled value if field is already filled, otherwise use current input value
-            const displayValue = field.isFilled ? field.value : (values[field.id] || null);
+            const displayValue: string | null = field.isFilled ? (field.value ?? null) : (values[field.id] ?? null);
             return (
               <div key={field.id} className="contents">
                 <SignableField
