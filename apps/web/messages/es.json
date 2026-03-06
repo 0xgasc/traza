@@ -127,8 +127,12 @@
       "document": {
         "created": "Documento creado",
         "sent": "Enviado para firmar",
+        "viewed": "Documento visto",
+        "signed": "Documento firmado",
+        "completed": "Todas las firmas completas",
         "downloaded": "Descargado",
-        "voided": "Anulado"
+        "voided": "Anulado",
+        "anchored": "Anclado en blockchain"
       }
     }
   },

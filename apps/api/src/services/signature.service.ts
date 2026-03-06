@@ -26,6 +26,7 @@ export async function sendForSigning({
   documentId,
   userId,
   signers,
+  message,
   expiresInDays = 7,
   emailLocale = 'en',
 }: SendForSigningInput) {
@@ -141,6 +142,7 @@ export async function sendForSigning({
       documentTitle: document.title,
       signingUrl: record.signingUrl,
       expiresAt,
+      message, // Include custom message from sender
       locale: emailLocale, // Use document's email language
     }).catch((err) => {
       console.error(`[email] Failed to send signature request to ${record.signerEmail}:`, err);
