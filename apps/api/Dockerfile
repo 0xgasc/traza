@@ -30,10 +30,13 @@ RUN pnpm --filter @traza/database build && \
 # Compile the migration script to JS (before pruning devDeps removes tsc)
 RUN packages/database/node_modules/.bin/tsc packages/database/prisma/migrations/migrate-to-organizations.ts \
     --outDir packages/database/prisma/migrations \
+    --target ES2017 \
     --module commonjs \
+    --lib ES2017 \
     --esModuleInterop \
     --resolveJsonModule \
-    --skipLibCheck
+    --skipLibCheck \
+    --moduleResolution node
 
 # Remove devDependencies to reduce image size
 RUN pnpm prune --prod
