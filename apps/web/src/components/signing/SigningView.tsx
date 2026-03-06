@@ -16,6 +16,14 @@ interface FieldPosition {
   heightPercent: number;
   required?: boolean;
   signerEmail?: string;
+  // New fields for multi-signer support
+  isFilled?: boolean;
+  value?: string | null;
+  filledBy?: string | null;
+  filledByEmail?: string | null;
+  filledAt?: string | null;
+  isCurrentSigner?: boolean;
+  isReadOnly?: boolean;
 }
 
 interface SigningViewProps {
@@ -162,21 +170,22 @@ export default function SigningView({
   }, [submitted, documentCompleted, token, documentDetails]);
 
   // --- Next Field navigation ---
-  // Build a stable list of required fields sorted by page, then y, then x
+  // Build a stable list of required fields for the CURRENT signer sorted by page, then y, then x
   const requiredFields = useMemo(
     () =>
       fields
         .filter(
           (f) =>
             f.required &&
-            (!f.signerEmail || f.signerEmail === signerEmail)
+            f.isCurrentSigner && // Only navigate to current signer's fields
+            !f.isFilled // Skip already filled fields
         )
         .sort((a, b) => {
           if (a.page !== b.page) return a.page - b.page;
           if (a.yPercent !== b.yPercent) return a.yPercent - b.yPercent;
           return a.xPercent - b.xPercent;
         }),
-    [fields, signerEmail]
+    [fields]
   );
 
   // Derive which required fields are still unfilled
@@ -278,18 +287,22 @@ export default function SigningView({
       >
         {dims &&
           pageFields.map((field) => {
-            const isCurrentSigner =
-              !field.signerEmail || field.signerEmail === signerEmail;
+            const isCurrentSigner = field.isCurrentSigner !== false;
             const isHighlighted = highlightFieldId === field.id;
+            // Use pre-filled value if field is already filled, otherwise use current input value
+            const displayValue = field.isFilled ? field.value : (values[field.id] || null);
             return (
               <div key={field.id} className="contents">
                 <SignableField
                   field={field}
-                  value={values[field.id] || null}
+                  value={displayValue}
                   onFill={handleFill}
-                  disabled={!isCurrentSigner}
+                  disabled={!isCurrentSigner || field.isReadOnly || field.isFilled}
                   containerWidth={dims.width}
                   containerHeight={dims.height}
+                  isFilled={field.isFilled}
+                  filledBy={field.filledBy}
+                  filledAt={field.filledAt}
                 />
                 {/* Highlight pulse overlay */}
                 {isHighlighted && (

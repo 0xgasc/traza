@@ -27,6 +27,9 @@ interface SignableFieldProps {
   disabled?: boolean;
   containerWidth: number;
   containerHeight: number;
+  isFilled?: boolean;
+  filledBy?: string | null;
+  filledAt?: string | null;
 }
 
 export default function SignableField({
@@ -36,6 +39,9 @@ export default function SignableField({
   disabled = false,
   containerWidth,
   containerHeight,
+  isFilled = false,
+  filledBy = null,
+  filledAt = null,
 }: SignableFieldProps) {
   const left = (field.xPercent / 100) * containerWidth;
   const top = (field.yPercent / 100) * containerHeight;
@@ -114,18 +120,29 @@ export default function SignableField({
 
   return (
     <div
-      className={`absolute ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+      className={`absolute group ${disabled ? 'opacity-50 pointer-events-none' : ''} ${isFilled ? 'ring-2 ring-green-500/50' : ''}`}
       style={{
         left: `${left}px`,
         top: `${top}px`,
         width: `${width}px`,
         height: `${height}px`,
       }}
+      title={isFilled && filledBy ? `Signed by ${filledBy}` : undefined}
     >
-      {disabled && (
+      {disabled && !isFilled && (
         <div className="absolute -top-4 left-0 z-10">
           <span className="text-[8px] font-bold uppercase tracking-wider text-stone-400 bg-white/80 px-1">
             {fieldTypeLabel}
+          </span>
+        </div>
+      )}
+      {isFilled && filledBy && (
+        <div className="absolute -top-4 left-0 z-10">
+          <span className="text-[8px] font-bold uppercase tracking-wider text-green-700 bg-green-100 border border-green-300 px-1.5 py-0.5 rounded flex items-center gap-1">
+            <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+            {filledBy}
           </span>
         </div>
       )}

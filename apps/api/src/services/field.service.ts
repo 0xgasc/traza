@@ -95,10 +95,24 @@ export async function getSignerFields(token: string) {
     throw new AppError(410, 'EXPIRED', 'This signing link has expired');
   }
 
+  // Fetch ALL fields for the document (not just current signer's)
+  // This allows signers to see fields filled by others
   const fields = await prisma.documentField.findMany({
     where: {
       documentId: payload.documentId,
-      signerEmail: signature.signerEmail,
+    },
+    include: {
+      fieldValue: {
+        include: {
+          signature: {
+            select: {
+              signerName: true,
+              signerEmail: true,
+              signedAt: true,
+            },
+          },
+        },
+      },
     },
     orderBy: [{ page: 'asc' }, { order: 'asc' }],
   });
@@ -116,5 +130,13 @@ export async function getSignerFields(token: string) {
     required: field.required,
     signerEmail: field.signerEmail,
     checkboxStyle: field.checkboxStyle,
+    // Add fill status info
+    isFilled: !!field.fieldValue,
+    value: field.fieldValue?.value || null,
+    filledBy: field.fieldValue?.signature.signerName || null,
+    filledByEmail: field.fieldValue?.signature.signerEmail || null,
+    filledAt: field.fieldValue?.filledAt || null,
+    isCurrentSigner: field.signerEmail === signature.signerEmail,
+    isReadOnly: field.signerEmail !== signature.signerEmail, // Can't edit other signers' fields
   }));
 }
