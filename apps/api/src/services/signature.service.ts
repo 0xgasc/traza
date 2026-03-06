@@ -98,10 +98,10 @@ export async function sendForSigning({
     });
   }
 
-  // Update document status and email locale
+  // Update document status (emailLocale stored per-signature basis, not document level)
   await prisma.document.update({
     where: { id: documentId },
-    data: { status: 'PENDING', expiresAt, emailLocale },
+    data: { status: 'PENDING', expiresAt },
   });
 
   // Audit log
