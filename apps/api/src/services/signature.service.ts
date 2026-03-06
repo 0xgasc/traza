@@ -98,15 +98,13 @@ export async function sendForSigning({
     });
   }
 
-  // Update document status
-  // NOTE: emailLocale column may not exist in production DB yet - migration needed
+  // Update document status and email locale
   await prisma.document.update({
     where: { id: documentId },
     data: {
       status: 'PENDING',
       expiresAt,
-      // Only update emailLocale if the field exists (will be added via migration)
-      ...(emailLocale && { emailLocale }),
+      emailLocale,
     },
   });
 
