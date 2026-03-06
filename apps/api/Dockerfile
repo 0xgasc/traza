@@ -33,6 +33,7 @@ RUN packages/database/node_modules/.bin/tsc packages/database/prisma/migrations/
     --target ES2017 \
     --module commonjs \
     --lib ES2017 \
+    --types node \
     --esModuleInterop \
     --resolveJsonModule \
     --skipLibCheck \
