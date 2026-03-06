@@ -46,4 +46,4 @@ RUN mkdir -p /app/.local-storage && chown -R traza:nodejs /app/.local-storage
 USER traza
 EXPOSE 4000
 # Run DB migrations then start server (migrations are idempotent/safe on every deploy)
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema packages/database/prisma/schema.prisma && node apps/api/dist/server.js"]
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema packages/database/prisma/schema.prisma && (node_modules/.bin/tsx packages/database/prisma/migrations/migrate-to-organizations.ts || echo 'Org migration skipped') && node apps/api/dist/server.js"]
