@@ -47,13 +47,18 @@ export async function sendForSigning({
   const signatureRecords = await Promise.all(
     signers.map(async (signer, index) => {
       const order = signer.order ?? index + 1;
+
+      // Use temporary UUID to avoid unique constraint collision
+      const crypto = await import('crypto');
+      const tempToken = crypto.randomUUID();
+
       const signature = await prisma.signature.create({
         data: {
           documentId,
           signerEmail: signer.email.toLowerCase(),
           signerName: signer.name,
           order,
-          token: '', // Placeholder, will be updated
+          token: tempToken, // Temporary unique token
           tokenExpiresAt: expiresAt,
           status: 'PENDING',
         },
@@ -69,7 +74,7 @@ export async function sendForSigning({
         expiresInDays,
       );
 
-      // Update with actual token
+      // Update with actual JWT token
       await prisma.signature.update({
         where: { id: signature.id },
         data: { token },
