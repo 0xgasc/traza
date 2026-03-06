@@ -13,6 +13,7 @@ export const sendForSigningSchema = z.object({
     .max(100, 'Maximum 100 signers allowed per document'), // Increased from 20 to 100
   message: z.string().max(1000).optional(),
   expiresInDays: z.number().int().min(1).max(90).default(7),
+  emailLocale: z.enum(['en', 'es']).optional().default('en'),
 });
 
 export const submitSignatureSchema = z.object({
