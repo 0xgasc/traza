@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc && pnpm run db:migrate",
+    "build": "tsc",
     "db:migrate": "cd ../../packages/database && prisma migrate deploy",
-    "start": "node dist/server.js",
+    "start": "pnpm run db:migrate && node dist/server.js",
     "lint": "eslint src --ext .ts",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "test:unit": "NODE_OPTIONS='--experimental-vm-modules' jest __tests__/unit",
