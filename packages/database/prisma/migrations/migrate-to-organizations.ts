@@ -1,83 +1,85 @@
 /**
- * Data Migration Script: Migrate Users to Organizations
+ * Data Migration: Convert existing users to organization-based ownership
  *
  * This script:
  * 1. Creates a personal organization for each existing user
- * 2. Migrates documents from ownerId to organizationId
- * 3. Sets the user as OWNER of their personal organization
+ * 2. Adds the user as OWNER of their organization
+ * 3. Migrates all user documents to their organization
+ * 4. Sets platformRole to USER for all users (manually promote admins later)
  *
- * Run with: npx tsx prisma/migrations/migrate-to-organizations.ts
+ * Run: pnpm tsx prisma/migrations/migrate-to-organizations.ts
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, PlanTier, OrgStatus, OrgRole, PlatformRole } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-function generateSlug(email: string): string {
-  const base = email
-    .split('@')[0]
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '-')
-    .replace(/-+/g, '-')
-    .substring(0, 40);
-
-  // Add random suffix for uniqueness
-  const suffix = Math.random().toString(36).substring(2, 6);
-  return `${base}-${suffix}`;
-}
-
 async function main() {
-  console.log('Starting organization migration...\n');
+  console.log('🚀 Starting organization migration...\n');
 
-  // Get all existing users
+  // Get all users
   const users = await prisma.user.findMany({
     include: {
       documents: true,
-      memberships: true,
     },
   });
 
-  console.log(`Found ${users.length} users to migrate\n`);
+  console.log(`📊 Found ${users.length} users to migrate`);
 
-  let migratedCount = 0;
-  let skippedCount = 0;
+  let successCount = 0;
   let errorCount = 0;
 
   for (const user of users) {
     try {
-      // Skip users who already have organizations
-      if (user.memberships.length > 0) {
-        console.log(`[SKIP] ${user.email} - Already has ${user.memberships.length} organization(s)`);
-        skippedCount++;
+      console.log(`\n👤 Migrating user: ${user.email} (${user.name})`);
+
+      // Check if user already has an organization membership
+      const existingMembership = await prisma.orgMembership.findFirst({
+        where: { userId: user.id },
+      });
+
+      if (existingMembership) {
+        console.log(`  ⏭️  User already has organization membership, skipping...`);
         continue;
       }
 
-      console.log(`[MIGRATE] ${user.email}`);
+      // Create personal organization
+      const orgName = `${user.name}'s Organization`;
+      const orgSlug = user.id; // Use user ID as unique slug
 
-      // Create personal organization for the user
-      const orgSlug = generateSlug(user.email);
-      const orgName = user.name ? `${user.name}'s Workspace` : 'My Workspace';
+      console.log(`  📁 Creating organization: ${orgName}`);
 
       const organization = await prisma.organization.create({
         data: {
           name: orgName,
           slug: orgSlug,
-          status: 'ACTIVE',
-          planTier: user.planTier,
-          billingEmail: user.email,
-          members: {
-            create: {
-              userId: user.id,
-              role: 'OWNER',
-            },
-          },
+          status: OrgStatus.ACTIVE,
+          planTier: user.planTier || PlanTier.FREE,
+          logoUrl: user.brandingLogoUrl,
+          primaryColor: user.brandingColor || '#000000',
         },
       });
 
-      console.log(`  Created organization: ${organization.slug} (${organization.id})`);
+      console.log(`  ✅ Organization created: ${organization.id}`);
 
-      // Migrate documents to the organization
-      if (user.documents.length > 0) {
+      // Create membership with OWNER role
+      console.log(`  👑 Adding user as OWNER of organization`);
+
+      await prisma.orgMembership.create({
+        data: {
+          userId: user.id,
+          organizationId: organization.id,
+          role: OrgRole.OWNER,
+        },
+      });
+
+      console.log(`  ✅ Membership created`);
+
+      // Migrate all user documents to organization
+      const documentCount = user.documents.length;
+      if (documentCount > 0) {
+        console.log(`  📄 Migrating ${documentCount} documents to organization...`);
+
         await prisma.document.updateMany({
           where: { ownerId: user.id },
           data: {
@@ -86,53 +88,52 @@ async function main() {
           },
         });
 
-        console.log(`  Migrated ${user.documents.length} document(s)`);
+        console.log(`  ✅ Documents migrated`);
+      } else {
+        console.log(`  📄 No documents to migrate`);
       }
 
-      // Create audit log entry
-      await prisma.auditLog.create({
+      // Update user platform role (keep as USER, manually promote admins later)
+      await prisma.user.update({
+        where: { id: user.id },
         data: {
-          actorId: user.id,
-          organizationId: organization.id,
-          eventType: 'migration.user_to_org',
-          resourceType: 'User',
-          resourceId: user.id,
-          metadata: {
-            originalPlanTier: user.planTier,
-            documentsCount: user.documents.length,
-            migrationDate: new Date().toISOString(),
-          },
+          platformRole: PlatformRole.USER,
         },
       });
 
-      migratedCount++;
-      console.log(`  [OK] Migration complete\n`);
+      successCount++;
+      console.log(`  ✅ User migration completed successfully`);
     } catch (error) {
-      console.error(`  [ERROR] Failed to migrate ${user.email}:`, error);
       errorCount++;
+      console.error(`  ❌ Error migrating user ${user.email}:`, error);
     }
   }
 
-  console.log('\n========================================');
-  console.log('Migration Summary:');
-  console.log(`  Migrated: ${migratedCount}`);
-  console.log(`  Skipped:  ${skippedCount}`);
-  console.log(`  Errors:   ${errorCount}`);
-  console.log('========================================\n');
+  console.log('\n' + '='.repeat(60));
+  console.log(`✅ Migration completed!`);
+  console.log(`   Success: ${successCount} users`);
+  console.log(`   Errors:  ${errorCount} users`);
+  console.log('='.repeat(60));
 
   if (errorCount > 0) {
-    console.log('WARNING: Some users failed to migrate. Please review the errors above.');
-    process.exit(1);
+    console.log('\n⚠️  Some users failed to migrate. Review errors above.');
   }
 
-  console.log('Migration completed successfully!');
+  console.log('\n📋 Next steps:');
+  console.log('  1. Verify migrations in database');
+  console.log('  2. Manually promote admin users:');
+  console.log(`     UPDATE "User" SET "platformRole" = 'SUPER_ADMIN' WHERE email = 'admin@example.com';`);
+  console.log('  3. Test login and organization access');
+  console.log('  4. Deploy frontend changes');
 }
 
 main()
-  .catch((error) => {
-    console.error('Migration failed:', error);
-    process.exit(1);
-  })
-  .finally(async () => {
+  .then(async () => {
     await prisma.$disconnect();
+    process.exit(0);
+  })
+  .catch(async (e) => {
+    console.error('\n❌ Migration failed:', e);
+    await prisma.$disconnect();
+    process.exit(1);
   });
