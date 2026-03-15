@@ -52,3 +52,31 @@ export const accessCodeLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// Rate limiter for public signing endpoints — prevents enumeration and abuse
+export const signingLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: {
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many signing requests, please try again later',
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Tighter limiter for admin/sensitive operations
+export const adminLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: {
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many admin requests, please try again later',
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

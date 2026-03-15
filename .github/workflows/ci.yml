@@ -91,10 +91,10 @@ jobs:
     env:
       DATABASE_URL: postgresql://traza:traza@localhost:5432/traza_test
       REDIS_URL: redis://localhost:6379
-      JWT_SECRET: ci-test-jwt-secret-1234567890
-      JWT_REFRESH_SECRET: ci-test-refresh-secret-1234567890
-      SIGNING_TOKEN_SECRET: ci-test-signing-secret-1234567890
-      PLATFORM_SECRET_KEY: ci-test-platform-secret-1234567890
+      JWT_SECRET: ${{ github.run_id }}-jwt-${{ github.run_attempt }}-${{ github.sha }}
+      JWT_REFRESH_SECRET: ${{ github.run_id }}-refresh-${{ github.run_attempt }}-${{ github.sha }}
+      SIGNING_TOKEN_SECRET: ${{ github.run_id }}-signing-${{ github.run_attempt }}-${{ github.sha }}
+      PLATFORM_SECRET_KEY: ${{ github.run_id }}-platform-${{ github.run_attempt }}-${{ github.sha }}
       NODE_ENV: test
     steps:
       - uses: actions/checkout@v4

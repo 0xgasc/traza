@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { logger } from '../config/logger.js';
 
 // Paths and methods that should be audit-logged for security
 const AUDIT_PATTERNS = [
@@ -36,9 +37,9 @@ export function securityAudit(req: Request, res: Response, next: NextFunction) {
 
     // Log failed auth attempts at warn level
     if (res.statusCode === 401 || res.statusCode === 403) {
-      console.warn('[security-audit] FAILED:', JSON.stringify(logEntry));
+      logger.warn('[security-audit] FAILED:', JSON.stringify(logEntry));
     } else {
-      console.info('[security-audit]', JSON.stringify(logEntry));
+      logger.info('[security-audit]', JSON.stringify(logEntry));
     }
   });
 

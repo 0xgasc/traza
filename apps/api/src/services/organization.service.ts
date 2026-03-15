@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { AppError } from '../middleware/error.middleware.js';
 import { generateAccessToken } from '../utils/jwt.js';
 import { sendOrgInvitationEmail } from './email.service.js';
+import { logger } from '../config/logger.js';
 import type { OrgRole } from '@traza/database';
 
 // ============================================
@@ -497,7 +498,7 @@ export async function inviteMember(
     token,
     expiresAt,
   }).catch((err) => {
-    console.warn('[org] Failed to send invitation email:', err.message);
+    logger.warn('[org] Failed to send invitation email:', err.message);
   });
 
   return invitation;

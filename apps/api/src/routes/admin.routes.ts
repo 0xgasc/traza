@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import * as adminController from '../controllers/admin.controller.js';
 import { requireSuperAdmin } from '../middleware/auth.middleware.js';
+import { adminLimiter } from '../middleware/rateLimit.middleware.js';
 import { validate } from '../middleware/validation.middleware.js';
 import { z } from 'zod';
 
 const router = Router();
 
-// All admin routes require SUPER_ADMIN role
+// All admin routes require SUPER_ADMIN role + tighter rate limiting
 router.use(requireSuperAdmin);
+router.use(adminLimiter);
 
 // ============================================
 // Organization Management

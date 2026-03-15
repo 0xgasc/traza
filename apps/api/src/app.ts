@@ -23,6 +23,7 @@ import tagRoutes from './routes/tag.routes.js';
 import signerAuthRoutes from './routes/signer-auth.routes.js';
 
 import { sanitizeInput } from './middleware/sanitize.middleware.js';
+import { csrfProtection } from './middleware/csrf.middleware.js';
 import * as extraController from './controllers/document.extra.controller.js';
 
 const app = express();
@@ -81,6 +82,9 @@ app.use(cookieParser());
 
 // Input sanitization (XSS prevention)
 app.use(sanitizeInput);
+
+// CSRF origin verification for state-changing requests
+app.use(csrfProtection);
 
 // Request logging
 if (process.env.NODE_ENV !== 'test') {

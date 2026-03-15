@@ -5,6 +5,7 @@ import * as storage from './storage.service.js';
 import { generateStorageKey, validateMagicBytes } from '../utils/fileValidation.js';
 import { sendExpirationNoticeEmail } from './email.service.js';
 import { getEnv } from '../config/env.js';
+import { logger } from '../config/logger.js';
 import path from 'node:path';
 
 interface CreateDocumentInput {
@@ -209,7 +210,7 @@ export async function voidDocument(id: string, userId: string, reason?: string) 
       expiredAt: new Date(),
       senderEmail,
     }).catch((err) => {
-      console.warn(`[email] Failed to notify signer of void:`, err.message);
+      logger.warn(`[email] Failed to notify signer of void:`, err.message);
     });
   }
 

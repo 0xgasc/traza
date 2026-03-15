@@ -3,6 +3,7 @@ import { prisma } from '@traza/database';
 import { AppError } from '../middleware/error.middleware.js';
 import { generateAccessToken } from '../utils/jwt.js';
 import { getEnv } from '../config/env.js';
+import { logger } from '../config/logger.js';
 
 const MAGIC_LINK_EXPIRY_MINUTES = 15;
 
@@ -248,7 +249,7 @@ async function sendMagicLinkEmail(params: {
 </html>`;
 
   if (!client) {
-    console.warn(`[signer-auth] RESEND_API_KEY not set — magic link for ${params.to}: ${params.magicUrl}`);
+    logger.warn(`[signer-auth] RESEND_API_KEY not set — magic link for ${params.to}: ${params.magicUrl}`);
     return;
   }
 
@@ -260,7 +261,7 @@ async function sendMagicLinkEmail(params: {
   });
 
   if (error) {
-    console.error('[signer-auth] Failed to send magic link email:', error);
+    logger.error('[signer-auth] Failed to send magic link email:', error);
     throw new Error(`Magic link email failed: ${error.message}`);
   }
 }

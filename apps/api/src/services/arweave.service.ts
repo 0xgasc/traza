@@ -14,6 +14,7 @@
 
 import { prisma } from '@traza/database';
 import { getEnv } from '../config/env.js';
+import { logger } from '../config/logger.js';
 import { getFileBuffer } from './storage.service.js';
 
 function isIrysConfigured(): boolean {
@@ -48,7 +49,7 @@ export async function anchorDocumentToArweave(
   documentId: string,
 ): Promise<{ txId: string; url: string } | null> {
   if (!isIrysConfigured()) {
-    console.log('[arweave] IRYS_PRIVATE_KEY not set — skipping Arweave anchor');
+    logger.info('[arweave] IRYS_PRIVATE_KEY not set — skipping Arweave anchor');
     return null;
   }
 
@@ -57,7 +58,7 @@ export async function anchorDocumentToArweave(
     if (!document) throw new Error('Document not found');
 
     if (document.blockchainTxHash) {
-      console.log(`[arweave] ${documentId} already anchored (${document.blockchainTxHash}), skipping`);
+      logger.info(`[arweave] ${documentId} already anchored (${document.blockchainTxHash}), skipping`);
       return null;
     }
 
@@ -113,10 +114,10 @@ export async function anchorDocumentToArweave(
       },
     });
 
-    console.log(`[arweave] Anchored ${documentId} → ${url}`);
+    logger.info(`[arweave] Anchored ${documentId} → ${url}`);
     return { txId, url };
   } catch (err) {
-    console.error(`[arweave] Failed to anchor ${documentId}:`, (err as Error).message);
+    logger.error(`[arweave] Failed to anchor ${documentId}:`, (err as Error).message);
     return null;
   }
 }

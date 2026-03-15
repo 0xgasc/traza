@@ -2,6 +2,7 @@ import { prisma } from '@traza/database';
 import { AppError } from '../middleware/error.middleware.js';
 import { generateSigningToken, verifySigningToken } from '../utils/signingToken.js';
 import { getEnv } from '../config/env.js';
+import { logger } from '../config/logger.js';
 import { sendSignatureRequestEmail, sendDocumentCompletedEmail, sendReminderEmail, sendSignatureDeclinedEmail } from './email.service.js';
 import { dispatchEvent } from './webhookDispatcher.js';
 import { anchorDocumentToArweave } from './arweave.service.js';
@@ -131,7 +132,7 @@ export async function sendForSigning({
     title: document.title,
     signers: signers.map((s) => ({ email: s.email, name: s.name })),
     expiresAt: expiresAt.toISOString(),
-  }).catch((err) => console.error('[webhook] document.sent dispatch failed:', err));
+  }).catch((err) => logger.error('[webhook] document.sent dispatch failed:', err));
 
   // Send emails only to the FIRST signing group (sequential signing support)
   const owner = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
@@ -154,7 +155,7 @@ export async function sendForSigning({
       message, // Include custom message from sender
       locale: emailLocale, // Use document's email language
     }).catch((err) => {
-      console.error(`[email] Failed to send signature request to ${record.signerEmail}:`, err);
+      logger.error(`[email] Failed to send signature request to ${record.signerEmail}:`, err);
     });
   }
 
@@ -381,7 +382,7 @@ export async function submitSignature(
       signerEmail: signature.signerEmail,
       signerName: signature.signerName,
       signedAt: new Date().toISOString(),
-    }).catch((err) => console.error('[webhook] signature.signed dispatch failed:', err));
+    }).catch((err) => logger.error('[webhook] signature.signed dispatch failed:', err));
   }
 
   if (allSigned) {
@@ -406,7 +407,7 @@ export async function submitSignature(
       dispatchEvent(documentOwnerId, 'document.completed', payload.documentId, {
         totalSigners: allSignatures.length,
         completedAt: new Date().toISOString(),
-      }).catch((err) => console.error('[webhook] document.completed dispatch failed:', err));
+      }).catch((err) => logger.error('[webhook] document.completed dispatch failed:', err));
     }
 
     // Send completion email to document owner
@@ -425,14 +426,14 @@ export async function submitSignature(
         downloadUrl: `${env2.APP_URL}/documents/${doc.id}`,
         locale: doc.emailLocale || 'en', // Use document's email language
       }).catch((err) => {
-        console.error(`[email] Failed to send completion email:`, err);
+        logger.error(`[email] Failed to send completion email:`, err);
       });
     }
 
     // Notify CC recipients
     const { notifyCcRecipients } = await import('./recipient.service.js');
     notifyCcRecipients(payload.documentId).catch((err) => {
-      console.error('[cc] Failed to notify CC recipients:', err);
+      logger.error('[cc] Failed to notify CC recipients:', err);
     });
 
     // Generate signed PDF with all signatures overlaid, certificate, then anchor to Arweave (fire and forget)
@@ -449,19 +450,19 @@ export async function submitSignature(
           data: { pdfFileUrl: storageKey },
         });
 
-        console.log(`[pdfGenerator] Generated and saved signed PDF for document ${payload.documentId}`);
+        logger.info(`[pdfGenerator] Generated and saved signed PDF for document ${payload.documentId}`);
 
         // Generate Certificate of Completion
         const { saveCertificateToDocument } = await import('./certificate.service.js');
         await saveCertificateToDocument(payload.documentId).catch((err) => {
-          console.error('[certificate] Failed to generate certificate:', err);
+          logger.error('[certificate] Failed to generate certificate:', err);
         });
 
         // Now anchor the SIGNED PDF to Arweave (after it's ready)
         return anchorDocumentToArweave(payload.documentId);
       })
       .catch((err) => {
-        console.error('[pdfGenerator/arweave] Failed:', err);
+        logger.error('[pdfGenerator/arweave] Failed:', err);
       });
   } else {
     // Sequential signing: notify the next group of pending signers
@@ -488,7 +489,7 @@ export async function submitSignature(
           expiresAt: nextSig.tokenExpiresAt,
           locale: docInfo?.emailLocale || 'en', // Use document's email language
         }).catch((err) => {
-          console.error(`[email] Failed to notify next signer ${nextSig.signerEmail}:`, err);
+          logger.error(`[email] Failed to notify next signer ${nextSig.signerEmail}:`, err);
         });
       }
     }
@@ -545,7 +546,7 @@ export async function declineSignature(
       signerName: signature.signerName,
       reason: reason ?? null,
       declinedAt: new Date().toISOString(),
-    }).catch((err) => console.error('[webhook] signature.declined dispatch failed:', err));
+    }).catch((err) => logger.error('[webhook] signature.declined dispatch failed:', err));
 
     const env = getEnv();
     sendSignatureDeclinedEmail({
@@ -559,7 +560,7 @@ export async function declineSignature(
       documentUrl: `${env.APP_URL}/documents/${doc.id}`,
       locale: doc.emailLocale || 'en', // Use document's email language
     }).catch((err) => {
-      console.error(`[email] Failed to send decline notification:`, err);
+      logger.error(`[email] Failed to send decline notification:`, err);
     });
   }
 
@@ -742,7 +743,7 @@ export async function delegateSignature(token: string, newEmail: string, newName
 
   // SECURITY: Log delegation for audit purposes
   // TODO: Add dedicated email template for delegation notifications
-  console.log(`[delegation] Document owner notification: ${originalEmail} → ${newEmail} for "${signature.document.title}"`);
+  logger.info(`[delegation] Document owner notification: ${originalEmail} → ${newEmail} for "${signature.document.title}"`);
 
   // Send email to the new delegate
   sendSignatureRequestEmail({
@@ -753,7 +754,7 @@ export async function delegateSignature(token: string, newEmail: string, newName
     signingUrl: `${env.APP_URL}/en/sign/${newToken}`,
     expiresAt,
   }).catch((err) => {
-    console.error(`[email] Failed to notify delegate ${newEmail}:`, err);
+    logger.error(`[email] Failed to notify delegate ${newEmail}:`, err);
   });
 
   return { delegated: true, newSignerEmail: newEmail };

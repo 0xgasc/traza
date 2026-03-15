@@ -208,6 +208,7 @@ model Document {
   voidedAt          DateTime?
   voidReason        String?
   emailLocale       String?        @default("en") // Language for email notifications (en, es)
+  deletedAt         DateTime?      // Soft delete — null means active
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
@@ -229,6 +230,7 @@ model Document {
   @@index([status, createdAt])
   @@index([ownerId, createdAt])
   @@index([organizationId, createdAt])
+  @@index([deletedAt])
 }
 
 model Signature {

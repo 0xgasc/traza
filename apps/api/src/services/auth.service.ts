@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { prisma } from '@traza/database';
+import { logger } from '../config/logger.js';
 import { AUTH_CONFIG } from '../config/auth.js';
 import {
   generateAccessToken,
@@ -146,7 +147,7 @@ export async function refreshTokens(refreshTokenStr: string) {
     });
 
     if (allTokens.length > 0) {
-      console.warn(
+      logger.warn(
         `[SECURITY] Token reuse detected for user ${payload.userId}. Revoking all ${allTokens.length} tokens.`,
       );
 

@@ -7,6 +7,7 @@
 
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { prisma } from '@traza/database';
+import { logger } from '../config/logger.js';
 
 interface SignerInfo {
   name: string;
@@ -331,7 +332,7 @@ export async function saveCertificateToDocument(documentId: string): Promise<str
 
   // Update document with certificate URL (we'll add this field in schema later if needed)
   // For now, we'll just return the key
-  console.log(`[certificate] Generated certificate for document ${documentId}: ${certificateKey}`);
+  logger.info(`[certificate] Generated certificate for document ${documentId}: ${certificateKey}`);
 
   return certificateKey;
 }

@@ -30,8 +30,8 @@ export async function createDocument(req: Request, res: Response, next: NextFunc
 export async function listDocuments(req: Request, res: Response, next: NextFunction) {
   try {
     const status = req.query.status as DocumentStatus | undefined;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
     const search = (req.query.search as string) || undefined;
 
     const tagId = (req.query.tagId as string) || undefined;

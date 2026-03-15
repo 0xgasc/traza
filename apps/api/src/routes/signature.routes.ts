@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as signatureController from '../controllers/signature.controller.js';
 import * as fieldController from '../controllers/field.controller.js';
 import { requireAuth, authenticate } from '../middleware/auth.middleware.js';
-import { accessCodeLimiter } from '../middleware/rateLimit.middleware.js';
+import { accessCodeLimiter, signingLimiter } from '../middleware/rateLimit.middleware.js';
 import { validate } from '../middleware/validation.middleware.js';
 import {
   sendForSigningSchema,
@@ -36,10 +36,10 @@ router.post(
   signatureController.remindSigner,
 );
 
-// Public routes (signer with token)
-router.get('/sign/:token', signatureController.getSigningContext);
+// Public routes (signer with token) — rate limited to prevent enumeration
+router.get('/sign/:token', signingLimiter, signatureController.getSigningContext);
 
-router.get('/sign/:token/pdf', async (req, res, next) => {
+router.get('/sign/:token/pdf', signingLimiter, async (req, res, next) => {
   try {
     const token = req.params.token as string;
     verifySigningToken(token);
@@ -96,16 +96,18 @@ router.get('/sign/:token/pdf', async (req, res, next) => {
   }
 });
 
-router.get('/sign/:token/fields', fieldController.getSignerFields);
+router.get('/sign/:token/fields', signingLimiter, fieldController.getSignerFields);
 
 router.post(
   '/sign/:token',
+  signingLimiter,
   validate(submitSignatureSchema),
   signatureController.submitSignature,
 );
 
 router.post(
   '/sign/:token/decline',
+  signingLimiter,
   validate(declineSignatureSchema),
   signatureController.declineSignature,
 );

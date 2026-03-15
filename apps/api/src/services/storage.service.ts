@@ -7,6 +7,7 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { getS3Client } from '../config/s3.js';
 import { getEnv } from '../config/env.js';
+import { logger } from '../config/logger.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -49,7 +50,7 @@ export async function uploadFile(
       );
       return key;
     } catch (err) {
-      console.warn('S3 upload failed, falling back to local storage:', (err as Error).message);
+      logger.warn('S3 upload failed, falling back to local storage:', (err as Error).message);
     }
   }
 
@@ -83,7 +84,7 @@ export async function generatePresignedUrl(
         { expiresIn: expiresInSeconds },
       );
     } catch (err) {
-      console.warn('S3 presigned URL failed, using local path:', (err as Error).message);
+      logger.warn('S3 presigned URL failed, using local path:', (err as Error).message);
     }
   }
 
@@ -106,7 +107,7 @@ export async function getFileBuffer(key: string): Promise<Buffer | null> {
       const bytes = await response.Body?.transformToByteArray();
       return bytes ? Buffer.from(bytes) : null;
     } catch (err) {
-      console.warn('S3 get failed, trying local storage:', (err as Error).message);
+      logger.warn('S3 get failed, trying local storage:', (err as Error).message);
     }
   }
 
@@ -156,7 +157,7 @@ export async function deleteFile(key: string): Promise<void> {
       );
       return;
     } catch (err) {
-      console.warn('S3 delete failed, trying local:', (err as Error).message);
+      logger.warn('S3 delete failed, trying local:', (err as Error).message);
     }
   }
 

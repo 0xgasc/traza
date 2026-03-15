@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { render } from '@react-email/render';
 import { getEnv } from '../config/env.js';
+import { logger } from '../config/logger.js';
 import { SignatureRequest } from '../emails/SignatureRequest.js';
 import { DocumentCompleted } from '../emails/DocumentCompleted.js';
 import { Reminder } from '../emails/Reminder.js';
@@ -30,7 +31,7 @@ async function sendEmail(to: string, subject: string, html: string) {
   const env = getEnv();
 
   if (!client) {
-    console.warn(`[email] RESEND_API_KEY not set — skipping email to ${to}: "${subject}"`);
+    logger.warn(`[email] RESEND_API_KEY not set — skipping email to ${to}: "${subject}"`);
     return;
   }
 
@@ -42,7 +43,7 @@ async function sendEmail(to: string, subject: string, html: string) {
   });
 
   if (error) {
-    console.error(`[email] Failed to send to ${to}:`, error);
+    logger.error(`[email] Failed to send to ${to}:`, error);
     throw new Error(`Email delivery failed: ${error.message}`);
   }
 }

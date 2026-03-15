@@ -7,6 +7,7 @@
 
 import { PDFDocument, rgb, PDFPage } from 'pdf-lib';
 import { prisma } from '@traza/database';
+import { logger } from '../config/logger.js';
 import * as storage from './storage.service.js';
 
 interface FieldValue {
@@ -162,7 +163,7 @@ async function embedImage(
     } else if (dataUrl.startsWith('data:image/jpeg') || dataUrl.startsWith('data:image/jpg')) {
       image = await pdfDoc.embedJpg(imageBytes);
     } else {
-      console.warn(`[pdfGenerator] Unsupported image format: ${dataUrl.substring(0, 30)}`);
+      logger.warn(`[pdfGenerator] Unsupported image format: ${dataUrl.substring(0, 30)}`);
       return;
     }
 
@@ -174,6 +175,6 @@ async function embedImage(
       height,
     });
   } catch (err) {
-    console.error('[pdfGenerator] Failed to embed image:', (err as Error).message);
+    logger.error('[pdfGenerator] Failed to embed image:', (err as Error).message);
   }
 }

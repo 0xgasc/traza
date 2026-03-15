@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { prisma } from '@traza/database';
+import { logger } from '../config/logger.js';
 
 export async function dispatchEvent(
   documentOwnerId: string,
@@ -35,7 +36,7 @@ export async function dispatchEvent(
 
     // Fire and forget — async delivery
     deliverWebhook(delivery.id, webhook.url, webhook.secret, deliveryPayload).catch(
-      (err) => console.error(`Webhook delivery failed: ${delivery.id}`, err),
+      (err) => logger.error(`Webhook delivery failed: ${delivery.id}`, err),
     );
   }
 }

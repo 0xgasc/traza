@@ -2,6 +2,7 @@ import { prisma } from '@traza/database';
 import { AppError } from '../middleware/error.middleware.js';
 import { sendDocumentCompletedEmail } from './email.service.js';
 import { getEnv } from '../config/env.js';
+import { logger } from '../config/logger.js';
 
 export async function addRecipients(
   documentId: string,
@@ -60,7 +61,7 @@ export async function notifyCcRecipients(documentId: string) {
       totalSigners: 0,
       downloadUrl,
     }).catch((err) => {
-      console.error(`[email] Failed to notify CC recipient ${recipient.email}:`, err);
+      logger.error(`[email] Failed to notify CC recipient ${recipient.email}:`, err);
     });
 
     await prisma.recipient.update({

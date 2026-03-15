@@ -10,8 +10,8 @@ import type { OrgStatus, PlanTier, PlatformRole } from '@traza/database';
 export async function listOrganizations(req: Request, res: Response, next: NextFunction) {
   try {
     const params = {
-      page: req.query.page ? parseInt(req.query.page as string) : undefined,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+      page: req.query.page ? Math.max(1, parseInt(req.query.page as string)) : undefined,
+      limit: req.query.limit ? Math.min(100, Math.max(1, parseInt(req.query.limit as string))) : undefined,
       status: req.query.status as OrgStatus | undefined,
       planTier: req.query.planTier as PlanTier | undefined,
       search: req.query.search as string | undefined,
@@ -85,8 +85,8 @@ export async function deleteOrganization(req: Request, res: Response, next: Next
 export async function listUsers(req: Request, res: Response, next: NextFunction) {
   try {
     const params = {
-      page: req.query.page ? parseInt(req.query.page as string) : undefined,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+      page: req.query.page ? Math.max(1, parseInt(req.query.page as string)) : undefined,
+      limit: req.query.limit ? Math.min(100, Math.max(1, parseInt(req.query.limit as string))) : undefined,
       search: req.query.search as string | undefined,
       platformRole: req.query.platformRole as PlatformRole | undefined,
     };
@@ -195,8 +195,8 @@ export async function deleteFeatureFlag(req: Request, res: Response, next: NextF
 export async function listAuditLogs(req: Request, res: Response, next: NextFunction) {
   try {
     const params = {
-      page: req.query.page ? parseInt(req.query.page as string) : undefined,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+      page: req.query.page ? Math.max(1, parseInt(req.query.page as string)) : undefined,
+      limit: req.query.limit ? Math.min(100, Math.max(1, parseInt(req.query.limit as string))) : undefined,
       eventType: req.query.eventType as string | undefined,
       organizationId: req.query.organizationId as string | undefined,
       actorId: req.query.actorId as string | undefined,
