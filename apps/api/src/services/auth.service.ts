@@ -7,12 +7,31 @@ import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
+  verifyAccessToken,
   AccessTokenPayload,
 } from '../utils/jwt.js';
 import { AppError } from '../middleware/error.middleware.js';
+import { getEnv } from '../config/env.js';
+import { sendPasswordResetEmail } from '../services/email.service.js';
+import { validateTotpCode } from './totp.service.js';
 import type { PlatformRole, OrgRole } from '@traza/database';
 
-export async function register(email: string, password: string, name: string) {
+export interface SessionMeta {
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+function parseDeviceName(ua: string): string {
+  if (ua.includes('iPhone')) return 'iPhone';
+  if (ua.includes('iPad')) return 'iPad';
+  if (ua.includes('Android')) return 'Android';
+  if (ua.includes('Mac OS')) return 'Mac';
+  if (ua.includes('Windows')) return 'Windows';
+  if (ua.includes('Linux')) return 'Linux';
+  return 'Unknown';
+}
+
+export async function register(email: string, password: string, name: string, sessionMeta?: SessionMeta) {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     throw new AppError(409, 'EMAIL_EXISTS', 'An account with this email already exists');
@@ -25,7 +44,12 @@ export async function register(email: string, password: string, name: string) {
   });
 
   // New user has no org yet
-  const tokens = await createTokenPair(user.id, user.email, user.platformRole, null, null);
+  const tokens = await createTokenPair(user.id, user.email, user.platformRole, null, null, sessionMeta);
+
+  // Fire-and-forget verification email
+  sendVerificationEmail(user.id).catch((err) => {
+    logger.error('[AUTH] Failed to send verification email', { userId: user.id, error: err });
+  });
 
   return {
     user: {
@@ -53,7 +77,7 @@ function recordFailedAttempt(email: string) {
   loginAttempts.set(email, entry);
 }
 
-export async function login(email: string, password: string) {
+export async function login(email: string, password: string, sessionMeta?: SessionMeta) {
   // Check lockout
   const attempts = loginAttempts.get(email);
   if (attempts?.lockedUntil && Date.now() < attempts.lockedUntil) {
@@ -100,6 +124,25 @@ export async function login(email: string, password: string) {
   // Clear failed attempts on successful login
   loginAttempts.delete(email);
 
+  // If 2FA is enabled, require TOTP code
+  if (user.totpEnabled && user.totpSecret) {
+    // Return a partial response - client must provide TOTP code
+    return {
+      requires2FA: true,
+      tempToken: generateAccessToken({
+        userId: user.id,
+        email: user.email,
+        platformRole: user.platformRole,
+        orgId: null,
+        orgRole: null,
+      }),
+      user: null,
+      organization: null,
+      accessToken: null,
+      refreshToken: null,
+    } as any;
+  }
+
   // Update last login time
   await prisma.user.update({
     where: { id: user.id },
@@ -112,7 +155,7 @@ export async function login(email: string, password: string) {
   const orgId = hasActiveOrg ? defaultMembership.organizationId : null;
   const orgRole = hasActiveOrg ? defaultMembership.role : null;
 
-  const tokens = await createTokenPair(user.id, user.email, user.platformRole, orgId, orgRole);
+  const tokens = await createTokenPair(user.id, user.email, user.platformRole, orgId, orgRole, sessionMeta);
 
   return {
     user: {
@@ -132,7 +175,7 @@ export async function login(email: string, password: string) {
   };
 }
 
-export async function refreshTokens(refreshTokenStr: string) {
+export async function refreshTokens(refreshTokenStr: string, sessionMeta?: SessionMeta) {
   const payload = verifyRefreshToken(refreshTokenStr);
   const tokenHash = hashToken(refreshTokenStr);
 
@@ -201,7 +244,7 @@ export async function refreshTokens(refreshTokenStr: string) {
   const orgId = hasActiveOrg ? defaultMembership.organizationId : null;
   const orgRole = hasActiveOrg ? defaultMembership.role : null;
 
-  return createTokenPair(user.id, user.email, user.platformRole, orgId, orgRole);
+  return createTokenPair(user.id, user.email, user.platformRole, orgId, orgRole, sessionMeta);
 }
 
 export async function logout(refreshTokenStr: string) {
@@ -453,6 +496,7 @@ async function createTokenPair(
   platformRole: PlatformRole,
   orgId: string | null,
   orgRole: OrgRole | null,
+  sessionMeta?: SessionMeta,
 ) {
   const tokenId = crypto.randomUUID();
 
@@ -472,6 +516,9 @@ async function createTokenPair(
       userId,
       tokenHash,
       expiresAt: new Date(Date.now() + AUTH_CONFIG.refreshTokenExpiryMs),
+      ipAddress: sessionMeta?.ipAddress,
+      userAgent: sessionMeta?.userAgent,
+      deviceName: sessionMeta?.userAgent ? parseDeviceName(sessionMeta.userAgent) : null,
     },
   });
 
@@ -503,4 +550,233 @@ export async function changePassword(userId: string, currentPassword: string, ne
   await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
 
   return { changed: true };
+}
+
+export async function requestPasswordReset(email: string) {
+  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+
+  // Don't reveal if user exists — always return success
+  if (!user) {
+    logger.info(`[AUTH] Password reset requested for non-existent email: ${email}`);
+    return { sent: true };
+  }
+
+  // Invalidate any existing password reset tokens for this user
+  await prisma.passwordResetToken.updateMany({
+    where: { userId: user.id, usedAt: null },
+    data: { usedAt: new Date() },
+  });
+
+  // Generate raw token and hash it
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashToken(rawToken);
+
+  // Create token with 1 hour expiry
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      tokenHash,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    },
+  });
+
+  // Send reset email
+  const env = getEnv();
+  const resetUrl = `${env.APP_URL}/reset-password?token=${rawToken}`;
+
+  await sendPasswordResetEmail({
+    to: user.email,
+    recipientName: user.name,
+    resetUrl,
+    expiresInMinutes: 60,
+  });
+
+  logger.info(`[AUTH] Password reset email sent to user ${user.id}`);
+  return { sent: true };
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+  const tokenHash = hashToken(token);
+
+  const resetToken = await prisma.passwordResetToken.findFirst({
+    where: { tokenHash },
+  });
+
+  if (!resetToken) {
+    throw new AppError(400, 'INVALID_TOKEN', 'Invalid or expired reset token');
+  }
+
+  if (resetToken.usedAt) {
+    throw new AppError(400, 'TOKEN_USED', 'This reset token has already been used');
+  }
+
+  if (resetToken.expiresAt < new Date()) {
+    throw new AppError(400, 'TOKEN_EXPIRED', 'This reset token has expired');
+  }
+
+  // Hash new password and update user
+  const passwordHash = await bcrypt.hash(newPassword, AUTH_CONFIG.bcryptRounds);
+
+  await prisma.user.update({
+    where: { id: resetToken.userId },
+    data: { passwordHash },
+  });
+
+  // Mark token as used
+  await prisma.passwordResetToken.update({
+    where: { id: resetToken.id },
+    data: { usedAt: new Date() },
+  });
+
+  // Revoke all refresh tokens for security
+  await prisma.refreshToken.deleteMany({
+    where: { userId: resetToken.userId },
+  });
+
+  logger.info(`[AUTH] Password reset completed for user ${resetToken.userId}`);
+  return { reset: true };
+}
+
+export async function verifyLoginTotp(tempToken: string, code: string, sessionMeta?: SessionMeta) {
+  let payload: AccessTokenPayload;
+  try {
+    payload = verifyAccessToken(tempToken);
+  } catch {
+    throw new AppError(401, 'INVALID_TOKEN', 'Invalid or expired temporary token');
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    include: {
+      memberships: {
+        take: 1,
+        orderBy: { joinedAt: 'asc' },
+        include: {
+          organization: {
+            select: { id: true, name: true, slug: true, status: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!user) throw new AppError(404, 'NOT_FOUND', 'User not found');
+  if (!user.totpEnabled || !user.totpSecret) {
+    throw new AppError(400, 'TOTP_NOT_ENABLED', '2FA is not enabled for this account');
+  }
+
+  const valid = validateTotpCode(user.totpSecret, code);
+  if (!valid) throw new AppError(400, 'INVALID_CODE', 'Invalid verification code');
+
+  // Update last login time
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastLoginAt: new Date() },
+  });
+
+  // Get default org context
+  const defaultMembership = user.memberships[0];
+  const hasActiveOrg = defaultMembership?.organization.status === 'ACTIVE';
+  const orgId = hasActiveOrg ? defaultMembership.organizationId : null;
+  const orgRole = hasActiveOrg ? defaultMembership.role : null;
+
+  const tokens = await createTokenPair(user.id, user.email, user.platformRole, orgId, orgRole, sessionMeta);
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      platformRole: user.platformRole,
+      planTier: user.planTier,
+    },
+    organization: hasActiveOrg ? {
+      id: defaultMembership.organization.id,
+      name: defaultMembership.organization.name,
+      slug: defaultMembership.organization.slug,
+      role: orgRole,
+    } : null,
+    ...tokens,
+  };
+}
+
+// --- Session Management ---
+
+export async function listSessions(userId: string) {
+  const sessions = await prisma.refreshToken.findMany({
+    where: { userId, expiresAt: { gt: new Date() } },
+    select: {
+      id: true,
+      ipAddress: true,
+      userAgent: true,
+      deviceName: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  return sessions;
+}
+
+export async function revokeSession(sessionId: string, userId: string) {
+  const session = await prisma.refreshToken.findUnique({ where: { id: sessionId } });
+  if (!session || session.userId !== userId) {
+    throw new AppError(404, 'NOT_FOUND', 'Session not found');
+  }
+  await prisma.refreshToken.delete({ where: { id: sessionId } });
+  return { revoked: true };
+}
+
+export async function revokeAllSessions(userId: string, currentTokenHash?: string) {
+  if (currentTokenHash) {
+    await prisma.refreshToken.deleteMany({
+      where: { userId, tokenHash: { not: currentTokenHash } },
+    });
+  } else {
+    await prisma.refreshToken.deleteMany({ where: { userId } });
+  }
+  return { revokedAll: true };
+}
+
+// --- Email Verification ---
+
+export async function sendVerificationEmail(userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new AppError(404, 'NOT_FOUND', 'User not found');
+  if (user.emailVerified) throw new AppError(400, 'ALREADY_VERIFIED', 'Email is already verified');
+
+  // Invalidate existing tokens
+  await prisma.emailVerificationToken.deleteMany({ where: { userId } });
+
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashToken(rawToken);
+
+  await prisma.emailVerificationToken.create({
+    data: {
+      userId,
+      tokenHash,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+    },
+  });
+
+  const env = getEnv();
+  const verifyUrl = `${env.APP_URL}/verify-email?token=${rawToken}`;
+  logger.info('Verification email would be sent', { userId, verifyUrl });
+
+  return { sent: true };
+}
+
+export async function verifyEmail(token: string) {
+  const tokenHash = hashToken(token);
+  const stored = await prisma.emailVerificationToken.findUnique({ where: { tokenHash } });
+
+  if (!stored) throw new AppError(400, 'INVALID_TOKEN', 'Invalid verification token');
+  if (stored.usedAt) throw new AppError(400, 'TOKEN_USED', 'This token has already been used');
+  if (stored.expiresAt < new Date()) throw new AppError(400, 'TOKEN_EXPIRED', 'Verification token has expired');
+
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: stored.userId }, data: { emailVerified: true } }),
+    prisma.emailVerificationToken.update({ where: { id: stored.id }, data: { usedAt: new Date() } }),
+  ]);
+
+  return { verified: true };
 }

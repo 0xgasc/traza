@@ -83,10 +83,15 @@ model User {
   // planTier kept temporarily for migration, will move to Organization
   planTier     PlanTier     @default(FREE)
   apiKeyHash   String?
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  lastLoginAt  DateTime?
+  isActive      Boolean      @default(true)
+  emailVerified Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  lastLoginAt   DateTime?
+
+  // 2FA / TOTP
+  totpSecret  String?
+  totpEnabled Boolean @default(false)
 
   // Branding
   brandingLogoUrl  String?
@@ -104,7 +109,9 @@ model User {
   refreshTokens    RefreshToken[]
   tags             Tag[]
 
-  apiKeys          ApiKey[]
+  apiKeys                 ApiKey[]
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   // New org relations
   memberships     OrgMembership[]
@@ -372,6 +379,11 @@ model RefreshToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
 
+  // Session metadata for session management
+  ipAddress String?
+  userAgent String?
+  deviceName String?  // Derived from user agent parsing
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -533,6 +545,7 @@ model ApiKey {
   name        String    @default("Default")
   keyHash     String    @unique
   keyPrefix   String    // First 8 chars for identification (e.g. "trz_abc1...")
+  allowedIps  String[]  // Empty = allow all; otherwise restrict to these CIDRs/IPs
   expiresAt   DateTime?
   lastUsedAt  DateTime?
   revokedAt   DateTime?
@@ -542,6 +555,32 @@ model ApiKey {
 
   @@index([userId])
   @@index([keyHash])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // Magic link tokens for signer-only account authentication (no password)

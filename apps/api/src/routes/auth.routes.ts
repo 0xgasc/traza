@@ -3,7 +3,7 @@ import * as authController from '../controllers/auth.controller.js';
 import { validate } from '../middleware/validation.middleware.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { authLimiter } from '../middleware/rateLimit.middleware.js';
-import { registerSchema, loginSchema } from '../validators/auth.validators.js';
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../validators/auth.validators.js';
 
 const router = Router();
 
@@ -31,12 +31,41 @@ router.patch('/profile', requireAuth, authController.updateProfile);
 
 router.post('/change-password', requireAuth, authController.changePassword);
 
+router.post(
+  '/forgot-password',
+  authLimiter,
+  validate(forgotPasswordSchema),
+  authController.forgotPassword,
+);
+
+router.post(
+  '/reset-password',
+  authLimiter,
+  validate(resetPasswordSchema),
+  authController.resetPassword,
+);
+
+// 2FA / TOTP
+router.post('/2fa/setup', requireAuth, authController.setupTotp);
+router.post('/2fa/verify', requireAuth, authController.verifyTotp);
+router.post('/2fa/disable', requireAuth, authController.disableTotp);
+router.post('/2fa/login-verify', authLimiter, authController.verifyLoginTotp);
+
 router.post('/api-keys', requireAuth, authController.createApiKey);
 router.get('/api-keys', requireAuth, authController.listApiKeys);
 router.delete('/api-keys/:keyId', requireAuth, authController.revokeApiKey);
 
 // Legacy alias
 router.post('/api-key', requireAuth, authController.createApiKey);
+
+// Session management
+router.get('/sessions', requireAuth, authController.listSessions);
+router.delete('/sessions/:sessionId', requireAuth, authController.revokeSession);
+router.delete('/sessions', requireAuth, authController.revokeAllSessions);
+
+// Email verification
+router.post('/verify-email/send', requireAuth, authController.sendVerification);
+router.post('/verify-email', authController.verifyEmailToken);
 
 // Branding
 router.get('/branding', requireAuth, async (req, res, next) => {
