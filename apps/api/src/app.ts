@@ -24,6 +24,8 @@ import signerAuthRoutes from './routes/signer-auth.routes.js';
 
 import { sanitizeInput } from './middleware/sanitize.middleware.js';
 import { csrfProtection } from './middleware/csrf.middleware.js';
+import { metricsMiddleware, metricsHandler } from './middleware/metrics.middleware.js';
+import { fileExists } from './services/storage.service.js';
 import * as extraController from './controllers/document.extra.controller.js';
 
 const app = express();
@@ -94,6 +96,9 @@ if (process.env.NODE_ENV !== 'test') {
 // Rate limiting
 app.use('/api/', generalLimiter);
 
+// Metrics collection
+app.use(metricsMiddleware);
+
 // Security audit logging
 app.use('/api/', securityAudit);
 
@@ -103,6 +108,9 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Traza API Documentation',
 }));
 app.get('/api/docs.json', (_req, res) => { res.json(swaggerSpec); });
+
+// Prometheus metrics endpoint
+app.get('/metrics', metricsHandler);
 
 // Health check (liveness - is the process alive?)
 app.get('/health', (_req, res) => {
@@ -126,6 +134,15 @@ app.get('/ready', async (_req, res) => {
     checks.database = { status: 'ok', latency: `${Date.now() - dbStart}ms` };
   } catch (err: any) {
     checks.database = { status: 'error', error: err.message };
+  }
+
+  // Check S3 / storage connectivity
+  const s3Start = Date.now();
+  try {
+    await fileExists('health-check');
+    checks.storage = { status: 'ok', latency: `${Date.now() - s3Start}ms` };
+  } catch (err: any) {
+    checks.storage = { status: 'error', error: err.message };
   }
 
   const allOk = Object.values(checks).every((c) => c.status === 'ok');

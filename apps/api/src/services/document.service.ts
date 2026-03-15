@@ -60,7 +60,7 @@ export async function createDocument({ userId, file, title }: CreateDocumentInpu
 
 export async function getDocument(id: string, userId: string) {
   const document = await prisma.document.findUnique({
-    where: { id },
+    where: { id, deletedAt: null },
     include: {
       signatures: {
         select: {
@@ -74,17 +74,6 @@ export async function getDocument(id: string, userId: string) {
         },
         orderBy: { order: 'asc' },
       },
-      auditLogs: {
-        orderBy: { timestamp: 'desc' },
-        take: 30,
-        select: {
-          id: true,
-          eventType: true,
-          metadata: true,
-          timestamp: true,
-          actorId: true,
-        },
-      },
     },
   });
 
@@ -92,7 +81,21 @@ export async function getDocument(id: string, userId: string) {
     throw new AppError(404, 'NOT_FOUND', 'Document not found');
   }
 
-  return document;
+  // Load audit logs separately to avoid N+1 on heavy documents
+  const auditLogs = await prisma.auditLog.findMany({
+    where: { documentId: id },
+    orderBy: { timestamp: 'desc' },
+    take: 30,
+    select: {
+      id: true,
+      eventType: true,
+      metadata: true,
+      timestamp: true,
+      actorId: true,
+    },
+  });
+
+  return { ...document, auditLogs };
 }
 
 export async function listDocuments(
@@ -105,6 +108,7 @@ export async function listDocuments(
 
   const where = {
     ownerId: userId,
+    deletedAt: null,
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.search ? { title: { contains: filters.search, mode: 'insensitive' as const } } : {}),
     ...(filters.tagId ? { tags: { some: { tagId: filters.tagId } } } : {}),
@@ -321,14 +325,20 @@ export async function deleteDocument(
     throw new AppError(400, 'CANNOT_DELETE', 'Cannot delete a signed document');
   }
 
-  // Delete from S3
-  await storage.deleteFile(document.fileUrl);
-  if (document.pdfFileUrl && document.pdfFileUrl !== document.fileUrl) {
-    await storage.deleteFile(document.pdfFileUrl).catch(() => {});
-  }
+  // Soft delete — mark as deleted, keep data for audit trail
+  await prisma.document.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+  });
 
-  // Delete from DB (cascades to signatures, audit logs)
-  await prisma.document.delete({ where: { id } });
+  // Audit log
+  await prisma.auditLog.create({
+    data: {
+      documentId: id,
+      eventType: 'document.deleted',
+      actorId: userId,
+    },
+  });
 
   return { deleted: true };
 }

@@ -8,6 +8,8 @@ import { Reminder } from '../emails/Reminder.js';
 import { ExpirationNotice } from '../emails/ExpirationNotice.js';
 import { OrgInvitation } from '../emails/OrgInvitation.js';
 import { SignatureDeclined } from '../emails/SignatureDeclined.js';
+import { PasswordReset } from '../emails/PasswordReset.js';
+import { AccountSuspension } from '../emails/AccountSuspension.js';
 
 let resend: Resend | null = null;
 
@@ -239,6 +241,66 @@ export async function sendOrgInvitationEmail(params: {
   await sendEmail(
     params.to,
     `${params.inviterName} invited you to join ${params.organizationName}`,
+    html,
+  );
+}
+
+export async function sendPasswordResetEmail(params: {
+  to: string;
+  recipientName: string;
+  resetUrl: string;
+  expiresInMinutes: number;
+  locale?: string;
+}) {
+  const locale = params.locale || 'en';
+  const html = await render(
+    PasswordReset({
+      recipientName: params.recipientName,
+      resetUrl: params.resetUrl,
+      expiresInMinutes: params.expiresInMinutes,
+      locale,
+    }),
+  );
+
+  const subjects = {
+    en: 'Reset your password',
+    es: 'Restablecer tu contraseña',
+  };
+
+  await sendEmail(
+    params.to,
+    subjects[locale as keyof typeof subjects] || subjects.en,
+    html,
+  );
+}
+
+export async function sendAccountSuspensionEmail(params: {
+  to: string;
+  recipientName: string;
+  organizationName: string;
+  reason: string;
+  supportEmail?: string;
+  locale?: string;
+}) {
+  const locale = params.locale || 'en';
+  const html = await render(
+    AccountSuspension({
+      recipientName: params.recipientName,
+      organizationName: params.organizationName,
+      reason: params.reason,
+      supportEmail: params.supportEmail,
+      locale,
+    }),
+  );
+
+  const subjects = {
+    en: `Your organization "${params.organizationName}" has been suspended`,
+    es: `Tu organización "${params.organizationName}" ha sido suspendida`,
+  };
+
+  await sendEmail(
+    params.to,
+    subjects[locale as keyof typeof subjects] || subjects.en,
     html,
   );
 }
