@@ -246,16 +246,91 @@ export async function getUser(userId: string) {
   };
 }
 
-export async function generateApiKey(userId: string) {
+export async function generateApiKey(
+  userId: string,
+  name = 'Default',
+  expiresInDays?: number,
+) {
   const rawKey = `${AUTH_CONFIG.apiKeyPrefix}${crypto.randomBytes(AUTH_CONFIG.apiKeyLength).toString('base64url')}`;
-  const apiKeyHash = hashToken(rawKey);
+  const keyHash = hashToken(rawKey);
+  const keyPrefix = rawKey.slice(0, 12);
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { apiKeyHash },
+  const expiresAt = expiresInDays
+    ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
+    : null;
+
+  const apiKey = await prisma.apiKey.create({
+    data: {
+      userId,
+      name,
+      keyHash,
+      keyPrefix,
+      expiresAt,
+    },
   });
 
-  return { key: rawKey };
+  // Also keep legacy apiKeyHash on User for backward compatibility
+  await prisma.user.update({
+    where: { id: userId },
+    data: { apiKeyHash: keyHash },
+  });
+
+  return {
+    id: apiKey.id,
+    key: rawKey, // Only shown once
+    name: apiKey.name,
+    keyPrefix,
+    expiresAt,
+    createdAt: apiKey.createdAt,
+  };
+}
+
+export async function listApiKeys(userId: string) {
+  const keys = await prisma.apiKey.findMany({
+    where: { userId, revokedAt: null },
+    select: {
+      id: true,
+      name: true,
+      keyPrefix: true,
+      expiresAt: true,
+      lastUsedAt: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return keys.map((k) => ({
+    ...k,
+    isExpired: k.expiresAt ? k.expiresAt < new Date() : false,
+  }));
+}
+
+export async function revokeApiKey(keyId: string, userId: string) {
+  const apiKey = await prisma.apiKey.findUnique({ where: { id: keyId } });
+  if (!apiKey || apiKey.userId !== userId) {
+    throw new AppError(404, 'NOT_FOUND', 'API key not found');
+  }
+  if (apiKey.revokedAt) {
+    throw new AppError(400, 'ALREADY_REVOKED', 'API key is already revoked');
+  }
+
+  await prisma.apiKey.update({
+    where: { id: keyId },
+    data: { revokedAt: new Date() },
+  });
+
+  // If this was the latest active key, clear legacy field
+  const remaining = await prisma.apiKey.findFirst({
+    where: { userId, revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+  });
+  if (!remaining) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { apiKeyHash: null },
+    });
+  }
+
+  return { revoked: true };
 }
 
 // In-memory rate limiter for API key validation (prevents brute force)
@@ -312,25 +387,56 @@ function recordApiKeyAttempt(keyHash: string, success: boolean) {
 }
 
 export async function validateApiKey(key: string) {
-  const apiKeyHash = hashToken(key);
+  const keyHash = hashToken(key);
 
   // SECURITY: Rate limit API key validation attempts
-  checkApiKeyRateLimit(apiKeyHash);
+  checkApiKeyRateLimit(keyHash);
 
-  const user = await prisma.user.findFirst({ where: { apiKeyHash } });
+  // Check new ApiKey model first
+  const apiKey = await prisma.apiKey.findUnique({
+    where: { keyHash },
+    include: { user: { select: { id: true, email: true, platformRole: true, planTier: true, isActive: true } } },
+  });
+
+  if (apiKey) {
+    if (apiKey.revokedAt) {
+      recordApiKeyAttempt(keyHash, false);
+      throw new AppError(401, 'API_KEY_REVOKED', 'This API key has been revoked');
+    }
+    if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
+      recordApiKeyAttempt(keyHash, false);
+      throw new AppError(401, 'API_KEY_EXPIRED', 'This API key has expired');
+    }
+    if (!apiKey.user.isActive) {
+      recordApiKeyAttempt(keyHash, false);
+      throw new AppError(403, 'ACCOUNT_DISABLED', 'Account has been disabled');
+    }
+
+    // Update last used timestamp (fire-and-forget)
+    prisma.apiKey.update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } }).catch(() => {});
+
+    recordApiKeyAttempt(keyHash, true);
+    return {
+      id: apiKey.user.id,
+      email: apiKey.user.email,
+      platformRole: apiKey.user.platformRole,
+      planTier: apiKey.user.planTier,
+    };
+  }
+
+  // Fallback: check legacy apiKeyHash on User
+  const user = await prisma.user.findFirst({ where: { apiKeyHash: keyHash } });
   if (!user) {
-    recordApiKeyAttempt(apiKeyHash, false);
+    recordApiKeyAttempt(keyHash, false);
     throw new AppError(401, 'INVALID_API_KEY', 'Invalid API key');
   }
 
   if (!user.isActive) {
-    recordApiKeyAttempt(apiKeyHash, false);
+    recordApiKeyAttempt(keyHash, false);
     throw new AppError(403, 'ACCOUNT_DISABLED', 'Account has been disabled');
   }
 
-  // Clear attempts on success
-  recordApiKeyAttempt(apiKeyHash, true);
-
+  recordApiKeyAttempt(keyHash, true);
   return {
     id: user.id,
     email: user.email,

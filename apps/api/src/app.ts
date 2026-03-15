@@ -25,6 +25,7 @@ import signerAuthRoutes from './routes/signer-auth.routes.js';
 import { sanitizeInput } from './middleware/sanitize.middleware.js';
 import { csrfProtection } from './middleware/csrf.middleware.js';
 import { metricsMiddleware, metricsHandler } from './middleware/metrics.middleware.js';
+import { requestTimeout } from './middleware/timeout.middleware.js';
 import { fileExists } from './services/storage.service.js';
 import * as extraController from './controllers/document.extra.controller.js';
 
@@ -92,6 +93,9 @@ app.use(csrfProtection);
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 }
+
+// Request timeout (30s default, 120s for uploads)
+app.use('/api/', requestTimeout(30_000));
 
 // Rate limiting
 app.use('/api/', generalLimiter);

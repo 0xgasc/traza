@@ -84,8 +84,28 @@ export async function getMe(req: Request, res: Response, next: NextFunction) {
 export async function createApiKey(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = req.user!.userId;
-    const result = await authService.generateApiKey(userId);
+    const { name, expiresInDays } = req.body || {};
+    const result = await authService.generateApiKey(userId, name, expiresInDays);
     created(res, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listApiKeys(req: Request, res: Response, next: NextFunction) {
+  try {
+    const keys = await authService.listApiKeys(req.user!.userId);
+    success(res, keys);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function revokeApiKey(req: Request, res: Response, next: NextFunction) {
+  try {
+    const keyId = req.params.keyId as string;
+    const result = await authService.revokeApiKey(keyId, req.user!.userId);
+    success(res, result);
   } catch (err) {
     next(err);
   }

@@ -31,6 +31,11 @@ router.patch('/profile', requireAuth, authController.updateProfile);
 
 router.post('/change-password', requireAuth, authController.changePassword);
 
+router.post('/api-keys', requireAuth, authController.createApiKey);
+router.get('/api-keys', requireAuth, authController.listApiKeys);
+router.delete('/api-keys/:keyId', requireAuth, authController.revokeApiKey);
+
+// Legacy alias
 router.post('/api-key', requireAuth, authController.createApiKey);
 
 // Branding

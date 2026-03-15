@@ -14,6 +14,8 @@ export async function processTokenCleanup() {
     cleanupRefreshTokens(),
     cleanupMagicTokens(),
     cleanupOldDeliveries(),
+    cleanupOldAuditLogs(),
+    cleanupRevokedApiKeys(),
   ]);
 }
 
@@ -53,6 +55,36 @@ async function cleanupOldDeliveries() {
 
   if (result.count > 0) {
     logger.info('Cleaned up old webhook deliveries', { count: result.count });
+  }
+}
+
+async function cleanupRevokedApiKeys() {
+  // Delete API keys revoked more than 30 days ago
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const result = await prisma.apiKey.deleteMany({
+    where: {
+      revokedAt: { not: null, lt: thirtyDaysAgo },
+    },
+  });
+
+  if (result.count > 0) {
+    logger.info('Cleaned up revoked API keys', { count: result.count });
+  }
+}
+
+async function cleanupOldAuditLogs() {
+  // Keep audit logs for 1 year, then delete
+  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+
+  const result = await prisma.auditLog.deleteMany({
+    where: {
+      timestamp: { lt: oneYearAgo },
+    },
+  });
+
+  if (result.count > 0) {
+    logger.info('Cleaned up old audit logs (>1 year)', { count: result.count });
   }
 }
 

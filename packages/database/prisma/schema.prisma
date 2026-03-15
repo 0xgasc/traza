@@ -104,6 +104,8 @@ model User {
   refreshTokens    RefreshToken[]
   tags             Tag[]
 
+  apiKeys          ApiKey[]
+
   // New org relations
   memberships     OrgMembership[]
   invitationsSent OrgInvitation[]
@@ -523,6 +525,23 @@ model DocumentTag {
   tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([documentId, tagId])
+}
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  userId      String
+  name        String    @default("Default")
+  keyHash     String    @unique
+  keyPrefix   String    // First 8 chars for identification (e.g. "trz_abc1...")
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
 }
 
 // Magic link tokens for signer-only account authentication (no password)
