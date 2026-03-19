@@ -150,16 +150,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       access_token?: string;
       refreshToken?: string;
       refresh_token?: string;
-      user: User;
+      user?: User;
       organization?: Organization;
+      requires2FA?: boolean;
+      tempToken?: string;
     }>('/api/v1/auth/login', { email, password });
+
+    // If 2FA is required, throw with the temp token so the login page can handle it
+    if (data.requires2FA) {
+      const err = new Error('Two-factor authentication required');
+      (err as Error & { tempToken?: string }).tempToken = data.tempToken;
+      throw err;
+    }
 
     const accessToken = data.accessToken || data.access_token || '';
     const refreshToken = data.refreshToken || data.refresh_token || '';
 
     setAccessToken(accessToken);
     if (refreshToken) setRefreshToken(refreshToken);
-    setUser(data.user);
+    if (data.user) setUser(data.user);
 
     if (data.organization) {
       setCurrentOrg(data.organization);

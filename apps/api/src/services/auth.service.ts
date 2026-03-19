@@ -429,7 +429,7 @@ function recordApiKeyAttempt(keyHash: string, success: boolean) {
   }
 }
 
-export async function validateApiKey(key: string) {
+export async function validateApiKey(key: string, requestIp?: string) {
   const keyHash = hashToken(key);
 
   // SECURITY: Rate limit API key validation attempts
@@ -453,6 +453,15 @@ export async function validateApiKey(key: string) {
     if (!apiKey.user.isActive) {
       recordApiKeyAttempt(keyHash, false);
       throw new AppError(403, 'ACCOUNT_DISABLED', 'Account has been disabled');
+    }
+
+    // SECURITY: Enforce IP allowlist
+    if (apiKey.allowedIps && apiKey.allowedIps.length > 0) {
+      if (!requestIp || !apiKey.allowedIps.includes(requestIp)) {
+        recordApiKeyAttempt(keyHash, false);
+        logger.warn('[AUTH] API key used from unauthorized IP', { keyId: apiKey.id, requestIp, allowedIps: apiKey.allowedIps });
+        throw new AppError(403, 'IP_NOT_ALLOWED', 'This API key is not allowed from your IP address');
+      }
     }
 
     // Update last used timestamp (fire-and-forget)

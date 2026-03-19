@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth";
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
 
-type Tab = "profile" | "apikeys" | "webhooks" | "branding";
+type Tab = "profile" | "security" | "apikeys" | "webhooks" | "branding";
 
 interface WebhookDelivery {
   id: string;
@@ -30,6 +30,7 @@ export default function SettingsPage() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "profile", label: t("tabs.profile") },
+    { key: "security", label: "Security" },
     { key: "apikeys", label: t("tabs.apiKeys") },
     { key: "webhooks", label: t("tabs.webhooks") },
     { key: "branding", label: t("tabs.branding") },
@@ -65,6 +66,7 @@ export default function SettingsPage() {
       </div>
 
       {activeTab === "profile" && <ProfileTab />}
+      {activeTab === "security" && <SecurityTab />}
       {activeTab === "apikeys" && <ApiKeysTab />}
       {activeTab === "webhooks" && <WebhooksTab />}
       {activeTab === "branding" && <BrandingTab />}
@@ -217,6 +219,269 @@ function ProfileTab() {
           {pwLoading ? t("profile.changing") : t("profile.changePasswordButton")}
         </button>
       </form>
+    </div>
+  );
+}
+
+interface Session {
+  id: string;
+  ipAddress: string | null;
+  deviceName: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+function SecurityTab() {
+  // 2FA State
+  const [totpEnabled, setTotpEnabled] = useState(false);
+  const [setupData, setSetupData] = useState<{ qrCode: string; secret: string } | null>(null);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [disableCode, setDisableCode] = useState("");
+  const [tfaLoading, setTfaLoading] = useState(false);
+  const [tfaMessage, setTfaMessage] = useState("");
+  const [showDisable, setShowDisable] = useState(false);
+
+  // Sessions State
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+
+  useEffect(() => {
+    // Check 2FA status
+    apiGet<{ totpEnabled: boolean }>("/api/v1/auth/me")
+      .then((data) => {
+        if ('totpEnabled' in data) setTotpEnabled(!!data.totpEnabled);
+      })
+      .catch(() => {});
+
+    // Load sessions
+    loadSessions();
+  }, []);
+
+  const loadSessions = () => {
+    setSessionsLoading(true);
+    apiGet<Session[]>("/api/v1/auth/sessions")
+      .then((data) => setSessions(Array.isArray(data) ? data : []))
+      .catch(() => setSessions([]))
+      .finally(() => setSessionsLoading(false));
+  };
+
+  const handleSetup2FA = async () => {
+    setTfaLoading(true);
+    setTfaMessage("");
+    try {
+      const data = await apiPost<{ qrCode: string; secret: string }>("/api/v1/auth/2fa/setup");
+      setSetupData(data);
+    } catch (err: unknown) {
+      setTfaMessage(err instanceof Error ? err.message : "Setup failed");
+    } finally {
+      setTfaLoading(false);
+    }
+  };
+
+  const handleVerify2FA = async (e: FormEvent) => {
+    e.preventDefault();
+    setTfaLoading(true);
+    setTfaMessage("");
+    try {
+      await apiPost("/api/v1/auth/2fa/verify", { code: verifyCode });
+      setTotpEnabled(true);
+      setSetupData(null);
+      setVerifyCode("");
+      setTfaMessage("2FA enabled successfully!");
+    } catch (err: unknown) {
+      setTfaMessage(err instanceof Error ? err.message : "Invalid code");
+    } finally {
+      setTfaLoading(false);
+    }
+  };
+
+  const handleDisable2FA = async (e: FormEvent) => {
+    e.preventDefault();
+    setTfaLoading(true);
+    setTfaMessage("");
+    try {
+      await apiPost("/api/v1/auth/2fa/disable", { code: disableCode });
+      setTotpEnabled(false);
+      setShowDisable(false);
+      setDisableCode("");
+      setTfaMessage("2FA disabled.");
+    } catch (err: unknown) {
+      setTfaMessage(err instanceof Error ? err.message : "Invalid code");
+    } finally {
+      setTfaLoading(false);
+    }
+  };
+
+  const revokeSession = async (sessionId: string) => {
+    try {
+      await apiDelete("/api/v1/auth/sessions/" + sessionId);
+      setSessions(sessions.filter((s) => s.id !== sessionId));
+    } catch {
+      // ignore
+    }
+  };
+
+  const revokeAllSessions = async () => {
+    try {
+      await apiDelete("/api/v1/auth/sessions");
+      loadSessions();
+    } catch {
+      // ignore
+    }
+  };
+
+  return (
+    <div className="max-w-2xl space-y-8">
+      {/* Two-Factor Authentication */}
+      <div className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-500">
+          Two-Factor Authentication
+        </h2>
+
+        {tfaMessage && (
+          <div className="p-4 border-4 border-black bg-stone-100">
+            <p className="text-sm font-semibold">{tfaMessage}</p>
+          </div>
+        )}
+
+        {totpEnabled && !showDisable ? (
+          <div className="border-4 border-black bg-stone-50 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-bold text-sm uppercase tracking-wide">2FA is enabled</p>
+                <p className="text-xs text-stone-500 font-mono mt-1">Your account is protected with TOTP</p>
+              </div>
+              <button
+                onClick={() => setShowDisable(true)}
+                className="px-4 py-2 border-2 border-black text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors"
+              >
+                Disable
+              </button>
+            </div>
+          </div>
+        ) : totpEnabled && showDisable ? (
+          <form onSubmit={handleDisable2FA} className="border-4 border-black bg-stone-50 p-5 space-y-4">
+            <p className="text-sm font-semibold">Enter your current TOTP code to disable 2FA:</p>
+            <input
+              type="text"
+              value={disableCode}
+              onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              className="input w-full text-center text-xl tracking-[0.5em] font-mono"
+              placeholder="000000"
+              maxLength={6}
+              required
+            />
+            <div className="flex gap-2">
+              <button type="submit" disabled={tfaLoading || disableCode.length !== 6} className="btn">
+                {tfaLoading ? "Disabling..." : "Confirm Disable"}
+              </button>
+              <button type="button" onClick={() => { setShowDisable(false); setDisableCode(""); }} className="px-4 py-2 border-2 border-stone-300 text-xs font-bold uppercase">
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : setupData ? (
+          <div className="border-4 border-black bg-white p-5 space-y-4">
+            <p className="text-sm font-semibold">Scan this QR code with your authenticator app:</p>
+            <div className="flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={setupData.qrCode} alt="2FA QR Code" className="w-48 h-48" />
+            </div>
+            <div className="p-3 bg-stone-50 border-2 border-stone-200">
+              <p className="text-xs text-stone-500 uppercase font-bold mb-1">Manual entry key:</p>
+              <code className="text-sm font-mono break-all select-all">{setupData.secret}</code>
+            </div>
+            <form onSubmit={handleVerify2FA} className="space-y-3">
+              <div>
+                <label className="block text-sm font-semibold uppercase tracking-wide mb-2">
+                  Verification Code
+                </label>
+                <input
+                  type="text"
+                  value={verifyCode}
+                  onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="input w-full text-center text-xl tracking-[0.5em] font-mono"
+                  placeholder="000000"
+                  maxLength={6}
+                  autoFocus
+                  required
+                />
+              </div>
+              <button type="submit" disabled={tfaLoading || verifyCode.length !== 6} className="btn w-full">
+                {tfaLoading ? "Verifying..." : "Enable 2FA"}
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="border-4 border-black bg-stone-50 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-bold text-sm uppercase tracking-wide">2FA is not enabled</p>
+                <p className="text-xs text-stone-500 font-mono mt-1">Add an extra layer of security to your account</p>
+              </div>
+              <button
+                onClick={handleSetup2FA}
+                disabled={tfaLoading}
+                className="px-4 py-2 border-2 border-black text-xs font-bold uppercase bg-black text-white hover:bg-stone-800 transition-colors"
+              >
+                {tfaLoading ? "Setting up..." : "Setup 2FA"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Active Sessions */}
+      <div className="space-y-4 pt-6 border-t-4 border-stone-200">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-500">
+            Active Sessions
+          </h2>
+          {sessions.length > 1 && (
+            <button
+              onClick={revokeAllSessions}
+              className="px-3 py-1 border-2 border-black text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors"
+            >
+              Revoke All Others
+            </button>
+          )}
+        </div>
+
+        {sessionsLoading ? (
+          <div className="space-y-2">
+            {[1, 2].map((i) => (
+              <div key={i} className="h-16 bg-stone-100 animate-pulse border-2 border-stone-200" />
+            ))}
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="p-4 border-4 border-black bg-stone-50">
+            <p className="text-sm text-stone-500">No active sessions found.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {sessions.map((session, i) => (
+              <div key={session.id} className="border-4 border-black bg-white p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold">{session.deviceName || "Unknown Device"}</p>
+                  <p className="text-xs text-stone-500 font-mono">
+                    {session.ipAddress || "Unknown IP"} · {new Date(session.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                {i === 0 ? (
+                  <span className="px-2 py-1 bg-black text-white text-xs font-bold uppercase">Current</span>
+                ) : (
+                  <button
+                    onClick={() => revokeSession(session.id)}
+                    className="px-3 py-1 border-2 border-black text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors"
+                  >
+                    Revoke
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

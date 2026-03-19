@@ -2,6 +2,7 @@ import * as OTPAuth from 'otpauth';
 import QRCode from 'qrcode';
 import { prisma } from '@traza/database';
 import { AppError } from '../middleware/error.middleware.js';
+import { createAuditLog } from './audit.service.js';
 
 const ISSUER = 'Traza';
 
@@ -19,6 +20,8 @@ export async function setupTotp(userId: string) {
   const otpauthUri = totp.toString();
   const qrCodeDataUrl = await QRCode.toDataURL(otpauthUri);
 
+  createAuditLog({ actorId: userId, eventType: 'security.2fa_setup_initiated', resourceType: 'user', resourceId: userId }).catch(() => {});
+
   return { secret: secret.base32, qrCode: qrCodeDataUrl, otpauthUri };
 }
 
@@ -33,7 +36,8 @@ export async function verifyAndEnableTotp(userId: string, code: string) {
 
   await prisma.user.update({ where: { id: userId }, data: { totpEnabled: true } });
 
-  // Generate recovery codes would go here in a future iteration
+  createAuditLog({ actorId: userId, eventType: 'security.2fa_enabled', resourceType: 'user', resourceId: userId }).catch(() => {});
+
   return { enabled: true };
 }
 
@@ -51,5 +55,8 @@ export async function disableTotp(userId: string, code: string) {
   if (!valid) throw new AppError(400, 'INVALID_CODE', 'Invalid verification code');
 
   await prisma.user.update({ where: { id: userId }, data: { totpSecret: null, totpEnabled: false } });
+
+  createAuditLog({ actorId: userId, eventType: 'security.2fa_disabled', resourceType: 'user', resourceId: userId }).catch(() => {});
+
   return { disabled: true };
 }

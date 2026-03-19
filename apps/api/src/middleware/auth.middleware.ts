@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken, AccessTokenPayload, isImpersonationToken } from '../utils/jwt.js';
 import { validateApiKey } from '../services/auth.service.js';
 import { AppError } from './error.middleware.js';
+import { prisma } from '@traza/database';
 import type { OrgRole } from '@traza/database';
 
 declare global {
@@ -164,7 +165,7 @@ export async function requireApiKey(req: Request, _res: Response, next: NextFunc
   }
 
   try {
-    const user = await validateApiKey(key);
+    const user = await validateApiKey(key, req.ip);
     // Build a minimal payload for API key auth
     // Note: API keys don't have org context by default - they use the user's default org
     req.user = {
@@ -201,7 +202,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
   const apiKey = req.headers['x-api-key'] as string | undefined;
   if (apiKey) {
     try {
-      const user = await validateApiKey(apiKey);
+      const user = await validateApiKey(apiKey, req.ip);
       req.user = {
         userId: user.id,
         email: user.email,
@@ -217,6 +218,26 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
   }
 
   next(new AppError(401, 'UNAUTHORIZED', 'Authentication required'));
+}
+
+/**
+ * Require email to be verified (use after requireAuth)
+ */
+export async function requireEmailVerified(req: Request, _res: Response, next: NextFunction) {
+  if (!req.user) {
+    return next(new AppError(401, 'UNAUTHORIZED', 'Authentication required'));
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.userId },
+    select: { emailVerified: true },
+  });
+
+  if (!user?.emailVerified) {
+    return next(new AppError(403, 'EMAIL_NOT_VERIFIED', 'Please verify your email address before continuing'));
+  }
+
+  next();
 }
 
 // Role hierarchy for permission checks
