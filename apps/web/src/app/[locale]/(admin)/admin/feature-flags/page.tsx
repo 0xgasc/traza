@@ -44,8 +44,8 @@ export default function FeatureFlagsPage() {
 
   async function fetchFlags() {
     try {
-      const data = await apiGet<FeatureFlag[]>('/api/v1/admin/feature-flags');
-      setFlags(data);
+      const data = await apiGet<{ flags: FeatureFlag[] }>('/api/v1/admin/feature-flags');
+      setFlags(Array.isArray(data) ? data : data.flags);
     } catch (err: any) {
       setError(err.message || 'Failed to load feature flags');
     } finally {
