@@ -16,7 +16,7 @@ async function main() {
     where: { email },
     data: {
       platformRole: PlatformRole.SUPER_ADMIN,
-      password: hashedPassword,
+      passwordHash: hashedPassword,
     },
     select: { id: true, email: true, name: true, platformRole: true },
   });
