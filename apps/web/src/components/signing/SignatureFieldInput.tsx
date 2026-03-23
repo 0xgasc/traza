@@ -78,7 +78,7 @@ export default function SignatureFieldInput({
       {/* Modal */}
       {modalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
           onTouchMove={(e) => e.stopPropagation()}
         >
           {/* Backdrop */}
@@ -86,11 +86,11 @@ export default function SignatureFieldInput({
             className="absolute inset-0 bg-black/50"
             onClick={() => setModalOpen(false)}
           />
-          {/* Modal content — bottom sheet on mobile, centered on desktop */}
-          <div className="relative z-10 w-full sm:max-w-lg bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-            <div className="flex items-center justify-between border-b-4 border-black px-4 py-3">
+          {/* Modal content — centered, scrollable, respects safe area */}
+          <div className="relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b-4 border-black px-4 py-3 bg-white">
               <h2 className="font-bold uppercase text-sm tracking-wide">
-                DRAW YOUR SIGNATURE
+                SIGN HERE
               </h2>
               <button
                 onClick={() => setModalOpen(false)}
