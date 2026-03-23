@@ -227,7 +227,7 @@ export default function PdfViewer({
 
   // Render pages when document is loaded
   useEffect(() => {
-    if (!pdfDocRef.current || numPages === 0 || containerWidth === 0) return;
+    if (!pdfDocRef.current || numPages === 0) return;
 
     let cancelled = false;
 
@@ -237,7 +237,7 @@ export default function PdfViewer({
 
       // Determine padding based on screen width
       const padding = containerWidth < 640 ? CONTAINER_PADDING_MOBILE : CONTAINER_PADDING_DESKTOP;
-      const availableWidth = containerWidth - padding * 2;
+      const availableWidth = containerWidth > 0 ? containerWidth - padding * 2 : 0;
 
       for (let pageNum = 1; pageNum <= numPages; pageNum++) {
         if (cancelled) return;
