@@ -97,7 +97,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
       <div className={`flex flex-1 ${impersonating ? "pt-10" : ""}`}>
         <Sidebar />
-        <main className="flex-1 bg-stone-50 p-8 overflow-auto">
+        <main className="flex-1 bg-stone-50 p-4 md:p-8 pt-16 md:pt-4 overflow-auto">
           {children}
         </main>
       </div>

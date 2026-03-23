@@ -41,7 +41,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="border-b-4 border-black">
         <div className="max-w-4xl mx-auto px-6 py-24 md:py-32 text-center">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tighter leading-[0.95]">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold mb-6 tracking-tighter leading-[0.95]">
             {t("hero.title")}
           </h1>
           <p className="text-xl md:text-2xl mb-10 text-stone-600 max-w-2xl mx-auto">

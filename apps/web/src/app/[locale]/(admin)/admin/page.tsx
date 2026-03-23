@@ -45,7 +45,7 @@ export default function AdminDashboard() {
     return (
       <div className="animate-pulse">
         <div className="h-8 bg-zinc-200 w-48 mb-8" />
-        <div className="grid grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-32 bg-zinc-200 border-4 border-black" />
           ))}
@@ -93,7 +93,7 @@ export default function AdminDashboard() {
       </h1>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-4 gap-6 mb-12">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
         {statCards.map((stat) => (
           <div
             key={stat.label}
@@ -109,7 +109,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Organizations by Plan */}
-      <div className="grid grid-cols-2 gap-8 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
         <div className="bg-white border-4 border-black p-6 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
           <h2 className="text-xl font-black uppercase tracking-tighter mb-6">
             {t('orgsByPlan')}

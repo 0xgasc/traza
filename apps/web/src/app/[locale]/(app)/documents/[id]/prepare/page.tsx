@@ -274,8 +274,8 @@ export default function PreparePage() {
         )}
 
         {/* Add signer form */}
-        <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex-1 min-w-[200px]">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:items-end">
+          <div className="w-full sm:flex-1 sm:min-w-[200px]">
             <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-1">
               {t('signerName')}
             </label>
@@ -288,7 +288,7 @@ export default function PreparePage() {
               className="w-full px-3 py-2 border-4 border-black bg-white font-semibold text-sm placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-stone-400"
             />
           </div>
-          <div className="flex-1 min-w-[200px]">
+          <div className="w-full sm:flex-1 sm:min-w-[200px]">
             <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-1">
               {t('signerEmail')}
             </label>

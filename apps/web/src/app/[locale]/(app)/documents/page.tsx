@@ -378,7 +378,7 @@ export default function DocumentsPage() {
 
       {/* Bulk action bar */}
       {selectedDocs.size > 0 && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-black text-white border-4 border-black shadow-brutal px-6 py-4 flex items-center gap-4">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-black text-white border-4 border-black shadow-brutal px-3 py-3 sm:px-6 sm:py-4 flex items-center gap-2 sm:gap-4">
           <span className="text-sm font-semibold uppercase">
             {selectedDocs.size} {selectedDocs.size === 1 ? "document" : "documents"} selected
           </span>
@@ -432,6 +432,7 @@ export default function DocumentsPage() {
       ) : (
         <>
           <div className={`border-4 border-black bg-white ${loading ? "opacity-60" : ""} transition-opacity`}>
+            <div className="overflow-x-auto -mx-4 md:mx-0"><div className="min-w-[700px] md:min-w-0">
             <table className="w-full">
               <thead>
                 <tr className="border-b-4 border-black bg-black text-white">
@@ -616,6 +617,7 @@ export default function DocumentsPage() {
                 })}
               </tbody>
             </table>
+            </div></div>
           </div>
 
           {/* Pagination */}

@@ -222,7 +222,7 @@ export default function SendForSigningPage() {
             {displaySigners.map((signer, displayIndex) => {
               const originalIndex = signers.findIndex((s) => s === signer);
               return (
-                <div key={originalIndex} className="flex gap-2 items-center">
+                <div key={originalIndex} className="flex flex-col sm:flex-row gap-2 sm:items-center">
                   {sequential && (
                     <div className="flex flex-col gap-0.5 flex-shrink-0">
                       <button
@@ -268,7 +268,7 @@ export default function SendForSigningPage() {
                     value={signer.accessCode ?? ""}
                     onChange={(e) => updateSigner(originalIndex, "accessCode", e.target.value)}
                     placeholder={t("pinPlaceholder")}
-                    className="input w-24 flex-shrink-0"
+                    className="input w-full sm:w-24 flex-shrink-0"
                     maxLength={16}
                   />
                   {signer.fieldCount ? (

@@ -63,9 +63,32 @@ export default function AdminLayout({
         </div>
       </header>
 
+      {/* Mobile Nav */}
+      <div className="md:hidden overflow-x-auto border-b-4 border-black bg-white">
+        <nav className="flex gap-1 p-2 min-w-max">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wide whitespace-nowrap border-2 border-black transition-colors ${
+                  isActive
+                    ? "bg-black text-white"
+                    : "bg-white hover:bg-stone-100"
+                }`}
+              >
+                <span>{item.icon}</span>
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 bg-white border-r-4 border-black min-h-screen">
+        <aside className="hidden md:block w-64 bg-white border-r-4 border-black min-h-screen">
           <nav className="p-4 space-y-1">
             {navigation.map((item) => {
               const isActive = pathname === item.href;
@@ -88,7 +111,7 @@ export default function AdminLayout({
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-4 md:p-8">
           {children}
         </main>
       </div>

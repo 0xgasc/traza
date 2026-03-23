@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -16,13 +17,14 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, isSuperAdmin, logout } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  return (
-    <aside className="w-64 min-h-screen bg-white border-r-4 border-black flex flex-col justify-between">
+  const navContent = (
+    <>
       <div>
         {/* Logo */}
         <div className="p-6 border-b-4 border-black">
-          <Link href="/dashboard">
+          <Link href="/dashboard" onClick={() => setMobileOpen(false)}>
             <h1 className="text-2xl font-bold tracking-tighter uppercase">
               Traza
             </h1>
@@ -49,6 +51,7 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setMobileOpen(false)}
                 className={`block px-4 py-3 font-semibold uppercase text-sm tracking-wide transition-colors border-4 ${
                   isActive
                     ? 'bg-black text-white border-black'
@@ -64,6 +67,7 @@ export default function Sidebar() {
           {isSuperAdmin && (
             <Link
               href="/admin"
+              onClick={() => setMobileOpen(false)}
               className={`block px-4 py-3 font-semibold uppercase text-sm tracking-wide transition-colors border-4 mt-4 ${
                 pathname.startsWith('/admin')
                   ? 'bg-red-600 text-white border-red-600'
@@ -101,6 +105,49 @@ export default function Sidebar() {
           Logout
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile header bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b-4 border-black flex items-center justify-between px-4 py-3">
+        <span className="text-xl font-bold tracking-tighter uppercase">traza</span>
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="flex flex-col justify-center items-center gap-[5px] w-10 h-10"
+          aria-label="Open menu"
+        >
+          <div className="w-6 h-[3px] bg-black" />
+          <div className="w-6 h-[3px] bg-black" />
+          <div className="w-6 h-[3px] bg-black" />
+        </button>
+      </div>
+
+      {/* Mobile overlay menu */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-white flex flex-col overflow-y-auto">
+          {/* Close button */}
+          <div className="flex items-center justify-between px-4 py-3 border-b-4 border-black">
+            <span className="text-xl font-bold tracking-tighter uppercase">traza</span>
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="w-10 h-10 flex items-center justify-center text-2xl font-bold"
+              aria-label="Close menu"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex flex-col flex-1 justify-between">
+            {navContent}
+          </div>
+        </div>
+      )}
+
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-64 min-h-screen bg-white border-r-4 border-black flex-col justify-between">
+        {navContent}
+      </aside>
+    </>
   );
 }

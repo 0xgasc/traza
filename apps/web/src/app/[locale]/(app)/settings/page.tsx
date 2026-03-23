@@ -48,7 +48,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-4 border-black mb-8 bg-white">
+      <div className="grid grid-cols-3 sm:flex border-4 border-black mb-8 bg-white">
         {tabs.map((tab) => {
           const tabClass = activeTab === tab.key
             ? "bg-black text-white"
@@ -57,7 +57,7 @@ export default function SettingsPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={"flex-1 px-4 py-3 font-semibold uppercase text-sm tracking-wide transition-colors " + tabClass}
+              className={"flex-1 px-2 py-2 sm:px-4 sm:py-3 font-semibold uppercase text-xs sm:text-sm tracking-wide transition-colors " + tabClass}
             >
               {tab.label}
             </button>

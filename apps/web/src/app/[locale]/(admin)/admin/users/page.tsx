@@ -120,6 +120,7 @@ export default function UsersPage() {
 
       {/* Table */}
       <div className="bg-white border-4 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b-4 border-black bg-zinc-100">
@@ -197,6 +198,7 @@ export default function UsersPage() {
             )}
           </tbody>
         </table>
+        </div>
 
         {/* Pagination */}
         {data && data.pagination.totalPages > 1 && (

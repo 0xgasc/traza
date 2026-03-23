@@ -654,7 +654,7 @@ export default function PublicSigningPage() {
       <div className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/40">
         <div className="bg-white border-4 border-black p-6 w-full max-w-lg space-y-3 shadow-brutal">
           <p className="text-sm font-semibold uppercase tracking-wide">{t("actions.delegate")}</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input
               type="text"
               value={delegateName}
@@ -751,7 +751,7 @@ export default function PublicSigningPage() {
               <p className="font-semibold text-lg">{context?.documentTitle}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">
                   {t("request.signer")}
@@ -831,7 +831,7 @@ export default function PublicSigningPage() {
         {showDelegateForm && !showDeclineForm && (
           <div className="card space-y-3">
             <p className="text-sm font-semibold uppercase tracking-wide">{t("actions.delegate")}</p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input
                 type="text"
                 value={delegateName}
