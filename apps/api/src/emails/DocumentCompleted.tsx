@@ -11,6 +11,13 @@ import {
   Preview,
 } from '@react-email/components';
 
+interface SignerAudit {
+  name: string;
+  email: string;
+  signedAt: string | null;
+  ip: string | null;
+}
+
 interface DocumentCompletedProps {
   recipientName: string;
   documentTitle: string;
@@ -18,6 +25,7 @@ interface DocumentCompletedProps {
   totalSigners: number;
   downloadUrl: string;
   locale?: string;
+  signers?: SignerAudit[];
 }
 
 const translations = {
@@ -32,6 +40,9 @@ const translations = {
     completed: 'Completed:',
     signers: 'Signers:',
     button: 'DOWNLOAD SIGNED DOCUMENT',
+    auditTrail: 'Audit Trail',
+    signedOn: 'Signed:',
+    ip: 'IP:',
     note: 'A cryptographic proof of signing has been generated. You can verify document integrity at any time from your dashboard.',
     footer: 'Powered by Traza — Contracts, signed with proof.',
   },
@@ -46,6 +57,9 @@ const translations = {
     completed: 'Completado:',
     signers: 'Firmantes:',
     button: 'DESCARGAR DOCUMENTO FIRMADO',
+    auditTrail: 'Registro de Auditoría',
+    signedOn: 'Firmado:',
+    ip: 'IP:',
     note: 'Se ha generado una prueba criptográfica de la firma. Puedes verificar la integridad del documento en cualquier momento desde tu panel.',
     footer: 'Desarrollado por Traza — Contratos firmados con prueba.',
   },
@@ -58,6 +72,7 @@ export function DocumentCompleted({
   totalSigners,
   downloadUrl,
   locale = 'en',
+  signers = [],
 }: DocumentCompletedProps) {
   const t = translations[locale as keyof typeof translations] || translations.en;
   const formattedDate = completedAt.toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', {
@@ -115,6 +130,33 @@ export function DocumentCompleted({
                 </tr>
               </table>
             </Section>
+
+            {signers.length > 0 && (
+              <>
+                <Hr style={styles.hr} />
+                <Heading as="h3" style={styles.auditHeading}>{t.auditTrail}</Heading>
+                <table cellPadding="0" cellSpacing="0" border={0} style={styles.auditTable}>
+                  {signers.map((signer, i) => (
+                    <tr key={i}>
+                      <td style={styles.auditRow}>
+                        <Text style={styles.auditName}>{signer.name}</Text>
+                        <Text style={styles.auditEmail}>{signer.email}</Text>
+                        <Text style={styles.auditMeta}>
+                          {t.signedOn}{' '}
+                          {signer.signedAt
+                            ? new Date(signer.signedAt).toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', {
+                                year: 'numeric', month: 'short', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit',
+                              })
+                            : '—'}
+                          {signer.ip && <> · {t.ip} {signer.ip}</>}
+                        </Text>
+                      </td>
+                    </tr>
+                  ))}
+                </table>
+              </>
+            )}
 
             <Hr style={styles.hr} />
 
@@ -220,6 +262,42 @@ const styles = {
     borderColor: '#e7e5e4',
     borderTop: '1px solid #e7e5e4',
     margin: '24px 0',
+  },
+  auditHeading: {
+    color: '#000000',
+    fontSize: '14px',
+    fontWeight: '700' as const,
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase' as const,
+    margin: '0 0 12px 0',
+  },
+  auditTable: {
+    width: '100%',
+    borderCollapse: 'collapse' as const,
+  },
+  auditRow: {
+    borderBottom: '1px solid #e7e5e4',
+    padding: '10px 0',
+  },
+  auditName: {
+    color: '#1c1917',
+    fontSize: '14px',
+    fontWeight: '700' as const,
+    margin: '0',
+    lineHeight: '20px',
+  },
+  auditEmail: {
+    color: '#44403c',
+    fontSize: '13px',
+    margin: '0',
+    lineHeight: '18px',
+  },
+  auditMeta: {
+    color: '#78716c',
+    fontSize: '12px',
+    fontFamily: 'monospace',
+    margin: '2px 0 0 0',
+    lineHeight: '16px',
   },
   note: {
     color: '#44403c',

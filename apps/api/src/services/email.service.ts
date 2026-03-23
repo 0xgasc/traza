@@ -93,7 +93,8 @@ export async function sendDocumentCompletedEmail(params: {
   completedAt: Date;
   totalSigners: number;
   downloadUrl: string;
-  locale?: string; // Language for email content (en, es)
+  locale?: string;
+  signers?: Array<{ name: string; email: string; signedAt: string | null; ip: string | null }>;
 }) {
   const locale = params.locale || 'en';
   const html = await render(
@@ -104,6 +105,7 @@ export async function sendDocumentCompletedEmail(params: {
       totalSigners: params.totalSigners,
       downloadUrl: params.downloadUrl,
       locale,
+      signers: params.signers,
     }),
   );
 

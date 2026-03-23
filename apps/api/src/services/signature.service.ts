@@ -357,10 +357,14 @@ export async function submitSignature(
     data: {
       documentId: payload.documentId,
       eventType: 'document.signed',
+      ipAddress: ipAddress || undefined,
+      userAgent: userAgent || undefined,
       metadata: {
         signerEmail: signature.signerEmail,
+        signerName: signature.signerName,
         signatureType,
         ipAddress,
+        userAgent,
         ...(fieldValues ? { fieldCount: fieldValues.length } : {}),
       },
     },
@@ -398,6 +402,12 @@ export async function submitSignature(
         metadata: {
           totalSignatures: allSignatures.length,
           completedAt: new Date().toISOString(),
+          signers: allSignatures.map((s) => ({
+            name: s.signerName,
+            email: s.signerEmail,
+            signedAt: s.signedAt?.toISOString() || null,
+            ip: s.ipAddress,
+          })),
         },
       },
     });
@@ -424,7 +434,13 @@ export async function submitSignature(
         completedAt: new Date(),
         totalSigners: allSignatures.length,
         downloadUrl: `${env2.APP_URL}/documents/${doc.id}`,
-        locale: doc.emailLocale || 'en', // Use document's email language
+        locale: doc.emailLocale || 'en',
+        signers: allSignatures.map((s) => ({
+          name: s.signerName,
+          email: s.signerEmail,
+          signedAt: s.signedAt?.toISOString() || null,
+          ip: s.ipAddress,
+        })),
       }).catch((err) => {
         logger.error(`[email] Failed to send completion email:`, err);
       });
