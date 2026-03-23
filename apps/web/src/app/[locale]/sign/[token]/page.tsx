@@ -61,6 +61,13 @@ interface FieldPosition {
   heightPercent: number;
   required?: boolean;
   signerEmail?: string;
+  isCurrentSigner?: boolean;
+  isReadOnly?: boolean;
+  isFilled?: boolean;
+  value?: string | null;
+  filledBy?: string | null;
+  filledByEmail?: string | null;
+  filledAt?: string | null;
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -86,6 +93,13 @@ function mapApiFieldToPosition(apiField: ApiFieldPosition): FieldPosition {
     heightPercent: toNumber(apiField.heightPercent),
     required: apiField.required !== false,
     signerEmail: apiField.signerEmail,
+    isCurrentSigner: apiField.isCurrentSigner as boolean | undefined,
+    isReadOnly: apiField.isReadOnly as boolean | undefined,
+    isFilled: apiField.isFilled as boolean | undefined,
+    value: apiField.value as string | null | undefined,
+    filledBy: apiField.filledBy as string | null | undefined,
+    filledByEmail: apiField.filledByEmail as string | null | undefined,
+    filledAt: apiField.filledAt as string | null | undefined,
   };
 }
 

@@ -6,6 +6,8 @@ interface FieldPosition {
   id: string;
   fieldType: string;
   required?: boolean;
+  isCurrentSigner?: boolean;
+  isFilled?: boolean;
 }
 
 interface FieldValuePayload {
@@ -27,7 +29,7 @@ export function useSigningState(fields: FieldPosition[], initialValues?: Record<
   }, []);
 
   const requiredFields = useMemo(
-    () => fields.filter((f) => f.required !== false),
+    () => fields.filter((f) => f.required !== false && f.isCurrentSigner !== false && !f.isFilled),
     [fields]
   );
 
