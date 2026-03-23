@@ -42,9 +42,9 @@ export default function SignatureFieldInput({
 
   if (disabled) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-stone-100/60 border-2 border-dashed border-stone-300">
+      <div className="w-full h-full flex items-center justify-center bg-stone-50/80 border border-stone-200">
         {value ? (
-          <img src={value} alt="Signature" className="max-w-full max-h-full object-contain p-1" />
+          <img src={value} alt="Signature" className="w-full h-full object-fill" />
         ) : (
           <span className="text-xs font-bold uppercase tracking-wide text-stone-400">
             SIGNATURE
@@ -63,11 +63,11 @@ export default function SignatureFieldInput({
         data-field-id={fieldId}
       >
         {value ? (
-          <div className="w-full h-full border-3 border-black bg-white flex items-center justify-center p-1 hover:border-stone-600 transition-colors">
+          <div className="w-full h-full border-2 border-black bg-white flex items-center justify-center hover:border-stone-600 transition-colors">
             <img
               src={value}
               alt="Signature"
-              className="max-w-full max-h-full object-contain"
+              className="w-full h-full object-fill"
             />
           </div>
         ) : (
