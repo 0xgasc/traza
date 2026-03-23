@@ -8,6 +8,7 @@ interface SignatureFieldInputProps {
   value: string | null;
   onFill: (value: string) => void;
   disabled?: boolean;
+  signerName?: string;
 }
 
 export default function SignatureFieldInput({
@@ -15,6 +16,7 @@ export default function SignatureFieldInput({
   value,
   onFill,
   disabled = false,
+  signerName,
 }: SignatureFieldInputProps) {
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -98,7 +100,7 @@ export default function SignatureFieldInput({
               </button>
             </div>
             <div className="p-4">
-              <SignatureCapture onComplete={handleComplete} />
+              <SignatureCapture onComplete={handleComplete} defaultName={signerName} />
             </div>
           </div>
         </div>

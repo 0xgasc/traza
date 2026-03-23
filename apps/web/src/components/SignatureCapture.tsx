@@ -6,6 +6,7 @@ interface SignatureCaptureProps {
   onComplete: (signatureData: string) => void;
   width?: number; // Optional width in pixels
   height?: number; // Optional height in pixels
+  defaultName?: string; // Pre-fill the "Type" tab with signer's name
 }
 
 type TabMode = "draw" | "type";
@@ -26,12 +27,12 @@ const SIGNATURE_FONTS: FontOption[] = [
 const GOOGLE_FONTS_URL =
   "https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=La+Belle+Aurore&family=Caveat:wght@700&family=Pacifico&display=swap";
 
-export default function SignatureCapture({ onComplete, width, height }: SignatureCaptureProps) {
+export default function SignatureCapture({ onComplete, width, height, defaultName }: SignatureCaptureProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
   const [activeTab, setActiveTab] = useState<TabMode>("draw");
-  const [typedName, setTypedName] = useState("");
+  const [typedName, setTypedName] = useState(defaultName || "");
   const [selectedFont, setSelectedFont] = useState<FontOption>(SIGNATURE_FONTS[0]!);
 
   // Load Google Fonts once

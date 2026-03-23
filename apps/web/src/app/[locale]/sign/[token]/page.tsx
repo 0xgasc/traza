@@ -715,6 +715,7 @@ export default function PublicSigningPage() {
           pdfUrl={pdfUrl}
           fields={fields}
           signerEmail={context.signerEmail}
+          signerName={context.signerName}
           savedSignatureData={savedSignatureData}
           onDecline={() => setShowDeclineForm(true)}
           onDelegate={() => setShowDelegateForm(true)}

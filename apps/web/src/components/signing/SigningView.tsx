@@ -31,6 +31,7 @@ interface SigningViewProps {
   pdfUrl: string;
   fields: FieldPosition[];
   signerEmail: string;
+  signerName?: string;
   savedSignatureData?: string | null;
   onDecline?: () => void;
   onDelegate?: () => void;
@@ -42,6 +43,7 @@ export default function SigningView({
   pdfUrl,
   fields,
   signerEmail,
+  signerName,
   savedSignatureData,
   onDecline,
   onDelegate,
@@ -305,6 +307,7 @@ export default function SigningView({
                   isFilled={field.isFilled}
                   filledBy={field.filledBy}
                   filledAt={field.filledAt}
+                  signerName={isCurrentSigner ? signerName : undefined}
                 />
                 {/* Highlight pulse overlay */}
                 {isHighlighted && (

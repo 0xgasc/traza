@@ -30,6 +30,7 @@ interface SignableFieldProps {
   isFilled?: boolean;
   filledBy?: string | null;
   filledAt?: string | null;
+  signerName?: string;
 }
 
 export default function SignableField({
@@ -42,6 +43,7 @@ export default function SignableField({
   isFilled = false,
   filledBy = null,
   filledAt = null,
+  signerName,
 }: SignableFieldProps) {
   const left = (field.xPercent / 100) * containerWidth;
   const top = (field.yPercent / 100) * containerHeight;
@@ -64,6 +66,7 @@ export default function SignableField({
             value={value}
             onFill={handleFill}
             disabled={disabled}
+            signerName={signerName}
           />
         );
       case 'initials':
