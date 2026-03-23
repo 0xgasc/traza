@@ -93,9 +93,9 @@ export async function createOrganization(input: CreateOrgInput, createdByUserId:
 
   if (!owner) {
     // Create user account with temporary password (they'll need to reset)
-    const tempPasswordHash = await import('bcryptjs').then(bcrypt =>
-      bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12)
-    );
+    const bcrypt = await import('bcryptjs');
+    const hashFn = bcrypt.default?.hash ?? bcrypt.hash;
+    const tempPasswordHash = await hashFn(crypto.randomBytes(32).toString('hex'), 12);
 
     owner = await prisma.user.create({
       data: {
