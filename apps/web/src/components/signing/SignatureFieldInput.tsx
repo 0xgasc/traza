@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SignatureCapture from '@/components/SignatureCapture';
 
 interface SignatureFieldInputProps {
@@ -17,6 +17,21 @@ export default function SignatureFieldInput({
   disabled = false,
 }: SignatureFieldInputProps) {
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Lock body scroll when modal is open (prevents glitchy mobile behavior)
+  useEffect(() => {
+    if (modalOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [modalOpen]);
 
   const handleComplete = (dataUrl: string) => {
     onFill(dataUrl);
@@ -60,14 +75,17 @@ export default function SignatureFieldInput({
 
       {/* Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
+          onTouchMove={(e) => e.stopPropagation()}
+        >
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/50"
             onClick={() => setModalOpen(false)}
           />
-          {/* Modal content */}
-          <div className="relative z-10 w-full max-w-lg bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+          {/* Modal content — bottom sheet on mobile, centered on desktop */}
+          <div className="relative z-10 w-full sm:max-w-lg bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
             <div className="flex items-center justify-between border-b-4 border-black px-4 py-3">
               <h2 className="font-bold uppercase text-sm tracking-wide">
                 DRAW YOUR SIGNATURE

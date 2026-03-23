@@ -120,10 +120,10 @@ export default function SignableField({
 
   return (
     <div
-      className={`absolute group transition-all duration-200 ease-out ${
-        disabled ? 'opacity-50 pointer-events-none' : 'hover:scale-[1.02]'
+      className={`absolute group ${
+        disabled ? 'opacity-50 pointer-events-none' : ''
       } ${
-        isFilled ? 'ring-2 ring-green-500/50' : 'hover:ring-2 hover:ring-black/20'
+        isFilled ? 'ring-2 ring-green-500/50' : ''
       }`}
       style={{
         left: `${left}px`,
