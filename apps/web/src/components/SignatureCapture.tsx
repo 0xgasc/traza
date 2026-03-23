@@ -125,7 +125,16 @@ export default function SignatureCapture({ onComplete, width, height, defaultNam
     if (activeTab === "draw") {
       const canvas = getCanvas();
       if (!canvas || !hasDrawn) return;
-      const dataUrl = canvas.toDataURL("image/png");
+      // Use smaller output canvas to reduce payload size on high-DPI mobile screens
+      const outputCanvas = document.createElement("canvas");
+      outputCanvas.width = 600;
+      outputCanvas.height = 200;
+      const outputCtx = outputCanvas.getContext("2d");
+      if (!outputCtx) return;
+      outputCtx.fillStyle = "#FFFFFF";
+      outputCtx.fillRect(0, 0, 600, 200);
+      outputCtx.drawImage(canvas, 0, 0, 600, 200);
+      const dataUrl = outputCanvas.toDataURL("image/png");
       onComplete(dataUrl);
     } else {
       if (!typedName.trim()) return;
