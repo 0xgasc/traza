@@ -26,10 +26,17 @@ export default function CheckboxFieldInput({
   };
 
   if (disabled) {
+    const filledChecked = value === 'true';
     return (
       <div className="w-full h-full flex items-center gap-2 bg-stone-100/60">
-        <div className="w-8 h-8 border-2 border-dashed border-stone-300 flex items-center justify-center shrink-0">
-          <span className="text-[10px] font-bold text-stone-300">?</span>
+        <div className={`w-8 h-8 border-2 flex items-center justify-center shrink-0 ${
+          filledChecked ? 'border-stone-400 bg-stone-200' : 'border-dashed border-stone-300'
+        }`}>
+          {filledChecked ? (
+            <span className="text-sm font-bold text-stone-600">{checkmarkSymbol}</span>
+          ) : (
+            <span className="text-[10px] font-bold text-stone-300">?</span>
+          )}
         </div>
         {label && (
           <span className="text-[10px] font-bold uppercase tracking-wide text-stone-400 truncate">

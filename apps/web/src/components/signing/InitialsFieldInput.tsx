@@ -26,9 +26,13 @@ export default function InitialsFieldInput({
   if (disabled) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-stone-100/60 border-2 border-dashed border-stone-300">
-        <span className="text-[10px] font-bold uppercase tracking-wide text-stone-400">
-          INITIALS
-        </span>
+        {value ? (
+          <img src={value} alt="Initials" className="max-w-full max-h-full object-contain p-1" />
+        ) : (
+          <span className="text-[10px] font-bold uppercase tracking-wide text-stone-400">
+            INITIALS
+          </span>
+        )}
       </div>
     );
   }

@@ -43,9 +43,13 @@ export default function SignatureFieldInput({
   if (disabled) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-stone-100/60 border-2 border-dashed border-stone-300">
-        <span className="text-xs font-bold uppercase tracking-wide text-stone-400">
-          SIGNATURE
-        </span>
+        {value ? (
+          <img src={value} alt="Signature" className="max-w-full max-h-full object-contain p-1" />
+        ) : (
+          <span className="text-xs font-bold uppercase tracking-wide text-stone-400">
+            SIGNATURE
+          </span>
+        )}
       </div>
     );
   }
