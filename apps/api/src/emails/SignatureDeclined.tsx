@@ -6,7 +6,7 @@ import {
   Section,
   Heading,
   Text,
-  Button,
+
   Hr,
   Preview,
 } from '@react-email/components';
@@ -121,9 +121,15 @@ export function SignatureDeclined({
             </Section>
 
             <Section style={styles.buttonSection}>
-              <Button href={documentUrl} style={styles.button}>
-                {t.button}
-              </Button>
+              <table cellPadding="0" cellSpacing="0" border={0} style={{ margin: '0 auto' }}>
+                <tr>
+                  <td align="center" style={styles.button}>
+                    <a href={documentUrl} style={styles.buttonLink} target="_blank">
+                      {t.button}
+                    </a>
+                  </td>
+                </tr>
+              </table>
             </Section>
 
             <Hr style={styles.hr} />
@@ -233,6 +239,9 @@ const styles = {
   button: {
     backgroundColor: '#000000',
     border: '3px solid #000000',
+    borderRadius: '0',
+  },
+  buttonLink: {
     color: '#ffffff',
     display: 'inline-block',
     fontSize: '14px',
@@ -241,6 +250,7 @@ const styles = {
     padding: '14px 32px',
     textDecoration: 'none',
     textTransform: 'uppercase' as const,
+    backgroundColor: '#000000',
   },
   hr: {
     borderColor: '#e7e5e4',
