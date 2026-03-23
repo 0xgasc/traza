@@ -157,7 +157,7 @@ const styles = {
     margin: '24px 0',
   },
   details: {
-    color: '#78716c',
+    color: '#44403c',
     fontSize: '13px',
     lineHeight: '20px',
     margin: '0 0 8px 0',

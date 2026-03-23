@@ -10,6 +10,8 @@ interface PdfPageProps {
   pdfDoc: PDFDoc;
   pageNumber: number;
   scale: number;
+  /** Optional container width — when provided the page will shrink to fit */
+  containerWidth?: number;
   children?: ReactNode;
 }
 
@@ -17,15 +19,37 @@ export default function PdfPage({
   pdfDoc,
   pageNumber,
   scale,
+  containerWidth,
   children,
 }: PdfPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderTaskRef = useRef<any>(null);
   const [dimensions, setDimensions] = useState<{
     width: number;
     height: number;
   } | null>(null);
+  const [measuredWidth, setMeasuredWidth] = useState<number>(0);
+
+  // Measure own container width when no explicit containerWidth is provided
+  useEffect(() => {
+    if (containerWidth !== undefined) return;
+    const el = wrapperRef.current?.parentElement;
+    if (!el) return;
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const w = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+        setMeasuredWidth(w);
+      }
+    });
+    ro.observe(el);
+    setMeasuredWidth(el.clientWidth);
+    return () => ro.disconnect();
+  }, [containerWidth]);
+
+  const effectiveContainerWidth = containerWidth ?? measuredWidth;
 
   useEffect(() => {
     let cancelled = false;
@@ -44,7 +68,17 @@ export default function PdfPage({
         const page = await pdfDoc.getPage(pageNumber);
         if (cancelled) return;
 
-        const viewport = page.getViewport({ scale });
+        // Compute a scale that fits the container if needed
+        const desiredViewport = page.getViewport({ scale });
+        let finalScale = scale;
+        if (
+          effectiveContainerWidth > 0 &&
+          desiredViewport.width > effectiveContainerWidth
+        ) {
+          finalScale = (effectiveContainerWidth / desiredViewport.width) * scale;
+        }
+
+        const viewport = page.getViewport({ scale: finalScale });
         const outputScale = window.devicePixelRatio || 1;
 
         canvas.width = Math.floor(viewport.width * outputScale);
@@ -93,11 +127,12 @@ export default function PdfPage({
         renderTaskRef.current = null;
       }
     };
-  }, [pdfDoc, pageNumber, scale]);
+  }, [pdfDoc, pageNumber, scale, effectiveContainerWidth]);
 
   return (
     <div
-      className="relative bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+      ref={wrapperRef}
+      className="relative bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-w-full"
       style={
         dimensions
           ? { width: dimensions.width, height: dimensions.height }
@@ -105,7 +140,7 @@ export default function PdfPage({
       }
       data-page-number={pageNumber}
     >
-      <canvas ref={canvasRef} className="block" />
+      <canvas ref={canvasRef} className="block max-w-full h-auto" />
       {/* Overlay container for field positioning */}
       {dimensions && children && (
         <div

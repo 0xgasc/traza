@@ -194,7 +194,7 @@ const styles = {
     margin: '24px 0',
   },
   note: {
-    color: '#78716c',
+    color: '#44403c',
     fontSize: '13px',
     lineHeight: '20px',
     margin: '0',

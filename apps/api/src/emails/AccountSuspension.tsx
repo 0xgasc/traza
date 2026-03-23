@@ -148,7 +148,7 @@ const styles = {
     padding: '16px',
   },
   reasonLabel: {
-    color: '#78716c',
+    color: '#44403c',
     fontSize: '12px',
     fontWeight: '600' as const,
     letterSpacing: '0.05em',
@@ -167,7 +167,7 @@ const styles = {
     margin: '24px 0',
   },
   details: {
-    color: '#78716c',
+    color: '#44403c',
     fontSize: '13px',
     lineHeight: '20px',
     margin: '0 0 8px 0',

@@ -74,10 +74,10 @@ export default function PdfToolbar({
   const scalePercent = Math.round(scale * 100);
 
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-3 bg-stone-50 border-b-4 border-black">
+    <div className="flex items-center justify-between gap-2 sm:gap-4 px-3 sm:px-4 py-2 sm:py-3 bg-stone-50 border-b-4 border-black">
       {/* Page navigation */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-bold uppercase tracking-wide text-stone-500 mr-1">
+      <div className="flex items-center gap-1 sm:gap-2">
+        <span className="text-xs font-bold uppercase tracking-wide text-stone-500 mr-1 hidden sm:inline">
           Page
         </span>
 
@@ -120,8 +120,8 @@ export default function PdfToolbar({
       </div>
 
       {/* Zoom controls */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-bold uppercase tracking-wide text-stone-500 mr-1">
+      <div className="flex items-center gap-1 sm:gap-2">
+        <span className="text-xs font-bold uppercase tracking-wide text-stone-500 mr-1 hidden sm:inline">
           Zoom
         </span>
 

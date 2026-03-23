@@ -35,9 +35,13 @@ interface PdfViewerProps {
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
 const PDFJS_WORKER_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
 
+// Padding inside the scrollable container (matches p-4 on mobile, p-6 on desktop)
+const CONTAINER_PADDING_MOBILE = 16; // px each side
+const CONTAINER_PADDING_DESKTOP = 24;
+
 export default function PdfViewer({
   pdfUrl,
-  scale = 1.0,
+  scale: scaleProp = 1.0,
   onPageChange,
   renderOverlay,
   className = '',
@@ -49,6 +53,7 @@ export default function PdfViewer({
   const [error, setError] = useState<string | null>(null);
   const [pageDimensions, setPageDimensions] = useState<Record<number, { width: number; height: number }>>({});
   const [pdfData, setPdfData] = useState<ArrayBuffer | string | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
   const blobUrlRef = useRef<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -59,6 +64,25 @@ export default function PdfViewer({
   useEffect(() => {
     onPageChangeRef.current = onPageChange;
   }, [onPageChange]);
+
+  // Track container width for responsive scaling
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+        setContainerWidth(width);
+      }
+    });
+
+    ro.observe(container);
+    // Set initial width
+    setContainerWidth(container.clientWidth);
+
+    return () => ro.disconnect();
+  }, []);
 
   // Load PDF.js from CDN
   useEffect(() => {
@@ -203,19 +227,37 @@ export default function PdfViewer({
 
   // Render pages when document is loaded
   useEffect(() => {
-    if (!pdfDocRef.current || numPages === 0) return;
+    if (!pdfDocRef.current || numPages === 0 || containerWidth === 0) return;
+
+    let cancelled = false;
 
     async function renderPages() {
       const pdfDoc = pdfDocRef.current;
       if (!pdfDoc) return;
 
+      // Determine padding based on screen width
+      const padding = containerWidth < 640 ? CONTAINER_PADDING_MOBILE : CONTAINER_PADDING_DESKTOP;
+      const availableWidth = containerWidth - padding * 2;
+
       for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        if (cancelled) return;
         const canvas = canvasRefs.current.get(pageNum);
         if (!canvas) continue;
 
         try {
           const page = await pdfDoc.getPage(pageNum);
-          const viewport = page.getViewport({ scale });
+          if (cancelled) return;
+
+          // Get the viewport at the requested scale
+          const desiredViewport = page.getViewport({ scale: scaleProp });
+
+          // If the page at desired scale is wider than the container, shrink to fit
+          let finalScale = scaleProp;
+          if (desiredViewport.width > availableWidth && availableWidth > 0) {
+            finalScale = (availableWidth / desiredViewport.width) * scaleProp;
+          }
+
+          const viewport = page.getViewport({ scale: finalScale });
           const outputScale = window.devicePixelRatio || 1;
 
           canvas.width = Math.floor(viewport.width * outputScale);
@@ -234,13 +276,19 @@ export default function PdfViewer({
             await page.render({ canvasContext: ctx, viewport }).promise;
           }
         } catch (err) {
-          console.error(`Error rendering page ${pageNum}:`, err);
+          if (!cancelled) {
+            console.error(`Error rendering page ${pageNum}:`, err);
+          }
         }
       }
     }
 
     renderPages();
-  }, [numPages, scale]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [numPages, scaleProp, containerWidth]);
 
   const setCanvasRef = useCallback((pageNumber: number) => (el: HTMLCanvasElement | null) => {
     if (el) {
@@ -319,21 +367,25 @@ export default function PdfViewer({
   }
 
   return (
-    <div ref={containerRef} className={`overflow-auto bg-stone-200 ${className}`}>
-      <div className="flex flex-col items-center gap-6 p-6">
+    <div
+      ref={containerRef}
+      className={`overflow-auto bg-stone-200 touch-pan-x touch-pan-y ${className}`}
+      style={{ WebkitOverflowScrolling: 'touch' }}
+    >
+      <div className="flex flex-col items-center gap-4 p-4 sm:gap-6 sm:p-6">
         {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNumber) => {
           const dims = pageDimensions[pageNumber];
           return (
             <div
               key={pageNumber}
               data-page-number={pageNumber}
-              className="relative"
+              className="relative w-full flex justify-center"
             >
               <div
-                className="relative bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                className="relative bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-w-full"
                 style={dims ? { width: dims.width, height: dims.height } : undefined}
               >
-                <canvas ref={setCanvasRef(pageNumber)} className="block" />
+                <canvas ref={setCanvasRef(pageNumber)} className="block max-w-full h-auto" />
                 {/* Overlay for field positioning */}
                 {renderOverlay && dims && (
                   <div
