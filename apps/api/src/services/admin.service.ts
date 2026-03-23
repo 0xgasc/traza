@@ -1,6 +1,7 @@
 import { prisma } from '@traza/database';
 import crypto from 'crypto';
 import { AppError } from '../middleware/error.middleware.js';
+import { logger } from '../config/logger.js';
 import { generateAccessToken, generateImpersonationToken } from '../utils/jwt.js';
 import type { PlanTier, OrgStatus, PlatformRole, OrgRole } from '@traza/database';
 
@@ -91,6 +92,7 @@ export async function createOrganization(input: CreateOrgInput, createdByUserId:
     where: { email: input.ownerEmail },
   });
 
+  let isNewUser = false;
   if (!owner) {
     // Create user account with temporary password (they'll need to reset)
     const bcrypt = await import('bcryptjs');
@@ -105,6 +107,7 @@ export async function createOrganization(input: CreateOrgInput, createdByUserId:
         platformRole: 'USER',
       },
     });
+    isNewUser = true;
   }
 
   // Create organization with owner membership
@@ -140,9 +143,17 @@ export async function createOrganization(input: CreateOrgInput, createdByUserId:
       eventType: 'organization.created',
       resourceType: 'Organization',
       resourceId: organization.id,
-      metadata: { planTier: input.planTier, createdBy: 'super_admin' },
+      metadata: { planTier: input.planTier, createdBy: 'super_admin', isNewUser },
     },
   });
+
+  // Send password reset email to new users so they can set their password
+  if (isNewUser) {
+    const { requestPasswordReset } = await import('./auth.service.js');
+    requestPasswordReset(input.ownerEmail).catch((err) => {
+      logger.error('[admin] Failed to send password reset to new org owner:', err);
+    });
+  }
 
   return organization;
 }
