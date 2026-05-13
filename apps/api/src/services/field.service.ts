@@ -59,6 +59,23 @@ export async function saveDocumentFields(
     );
   }
 
+  // Capture pre-edit snapshot for the audit trail
+  const before = await prisma.documentField.findMany({
+    where: { documentId },
+    select: {
+      id: true,
+      fieldType: true,
+      page: true,
+      positionX: true,
+      positionY: true,
+      width: true,
+      height: true,
+      signerEmail: true,
+      required: true,
+      label: true,
+    },
+  });
+
   const result = await prisma.$transaction(async (tx) => {
     // Delete all existing fields for this document
     await tx.documentField.deleteMany({ where: { documentId } });
@@ -81,6 +98,55 @@ export async function saveDocumentFields(
         order: field.order,
       })),
     });
+
+    // Audit trail: record what changed. Compare normalized snapshots — only
+    // emit if there's a real diff (some clients re-save with no changes).
+    const normalizeBefore = before.map((f) => ({
+      fieldType: f.fieldType,
+      page: f.page,
+      x: Number(f.positionX),
+      y: Number(f.positionY),
+      w: Number(f.width),
+      h: Number(f.height),
+      signer: f.signerEmail,
+      required: f.required,
+      label: f.label,
+    }));
+    const normalizeAfter = fields.map((f) => ({
+      fieldType: f.fieldType,
+      page: f.page,
+      x: f.positionX,
+      y: f.positionY,
+      w: f.width,
+      h: f.height,
+      signer: f.signerEmail,
+      required: f.required,
+      label: f.label ?? null,
+    }));
+
+    const sameLength = normalizeBefore.length === normalizeAfter.length;
+    const changed =
+      !sameLength ||
+      normalizeBefore.some(
+        (b, i) => JSON.stringify(b) !== JSON.stringify(normalizeAfter[i]),
+      );
+
+    if (changed) {
+      await tx.auditLog.create({
+        data: {
+          documentId,
+          eventType: 'document.fields_edited',
+          actorId: userId,
+          metadata: {
+            documentStatus: document.status,
+            fieldsBefore: normalizeBefore,
+            fieldsAfter: normalizeAfter,
+            countBefore: normalizeBefore.length,
+            countAfter: normalizeAfter.length,
+          },
+        },
+      });
+    }
 
     return created;
   });

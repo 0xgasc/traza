@@ -586,4 +586,5 @@ const AUDIT_LABELS: Record<string, string> = {
   "document.expired": "Document expired",
   "document.reminded": "Reminder sent",
   "document.anchored": "Anchored to blockchain",
+  "document.fields_edited": "Fields edited",
 };
