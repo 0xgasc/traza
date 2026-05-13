@@ -366,8 +366,18 @@ export default function SigningView({
           pdfUrl={pdfUrl}
           renderOverlay={renderOverlay}
           className="min-h-[calc(100vh-200px)]"
+          showSnapGuides={typeof window !== 'undefined' && window.location.search.includes('debug')}
         />
       </div>
+      {/* Debug HUD — only visible with ?debug, shows the measured overlay
+          dimensions so we can verify they match between prepare and signing. */}
+      {typeof window !== 'undefined' && window.location.search.includes('debug') && (
+        <div className="fixed top-14 right-2 z-[60] bg-black text-white text-[9px] font-mono px-2 py-1 pointer-events-none">
+          {Object.entries(pageDimensions).map(([p, d]) => (
+            <div key={p}>page {p}: {d.width.toFixed(1)}×{d.height.toFixed(1)}px</div>
+          ))}
+        </div>
+      )}
 
       {/* Bottom action bar */}
       <div className="sticky bottom-0 z-40 bg-white border-t-4 border-black">

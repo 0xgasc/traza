@@ -222,6 +222,7 @@ function PageOverlay({
   onAddField,
   snapLines,
 }: PageOverlayProps) {
+  const debug = typeof window !== 'undefined' && window.location.search.includes('debug');
   const overlayRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
 
@@ -280,6 +281,11 @@ function PageOverlay({
       onClick={handleClick}
       style={{ cursor: activeTool && signers.length > 0 ? 'crosshair' : 'default' }}
     >
+      {debug && dims.w > 0 && (
+        <span className="absolute top-0 left-0 bg-black text-white text-[9px] font-mono px-1 z-50 pointer-events-none">
+          p{pageNumber}: {dims.w.toFixed(1)}×{dims.h.toFixed(1)} · {snapLines.length} snap
+        </span>
+      )}
       {dims.w > 0 &&
         pageFields.map((field) => {
           const signerIdx = signers.findIndex(
