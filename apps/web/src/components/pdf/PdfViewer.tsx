@@ -460,16 +460,15 @@ export default function PdfViewer({
               className="relative w-full flex justify-center"
             >
               <div
-                className="relative bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-w-full"
+                className="relative bg-white ring-2 ring-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-w-full"
                 style={dims ? { width: dims.width, height: dims.height } : undefined}
               >
                 <canvas ref={setCanvasRef(pageNumber)} className="block max-w-full h-auto" />
-                {/* Overlay for field positioning */}
+                {/* Overlay for field positioning. Inset-0 alone (no inline
+                    width/height) keeps the overlay coordinate space exactly
+                    aligned with the canvas — both fill the same box. */}
                 {renderOverlay && dims && (
-                  <div
-                    className="absolute inset-0"
-                    style={{ width: dims.width, height: dims.height }}
-                  >
+                  <div className="absolute inset-0">
                     {renderOverlay(pageNumber)}
                   </div>
                 )}
