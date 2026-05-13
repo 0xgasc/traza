@@ -123,8 +123,13 @@ export default function SignableField({
     }
   };
 
+  const debug = typeof window !== 'undefined' && window.location.search.includes('debug');
+
   return (
     <div
+      data-field-type={field.fieldType}
+      data-y-percent={field.yPercent}
+      data-x-percent={field.xPercent}
       className={`absolute group ${
         disabled ? 'opacity-50 pointer-events-none' : ''
       } ${
@@ -138,6 +143,13 @@ export default function SignableField({
       }}
       title={isFilled && filledBy ? `Signed by ${filledBy}` : undefined}
     >
+      {debug && (
+        <span
+          className="absolute -top-3 left-0 text-[8px] font-mono font-bold bg-red-600 text-white px-1 leading-none whitespace-nowrap z-50 pointer-events-none"
+        >
+          {field.fieldType}·Y{Number(field.yPercent).toFixed(1)}·X{Number(field.xPercent).toFixed(1)}·H{Number(field.heightPercent).toFixed(1)}
+        </span>
+      )}
       {disabled && !isFilled && (
         <div className="absolute -top-4 left-0 z-10">
           <span className="text-[8px] font-bold uppercase tracking-wider text-stone-400 bg-white/80 px-1">

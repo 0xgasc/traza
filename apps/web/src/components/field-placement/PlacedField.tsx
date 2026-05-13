@@ -172,6 +172,8 @@ export default function PlacedField({
     });
   };
 
+  const debug = typeof window !== 'undefined' && window.location.search.includes('debug');
+
   return (
     <Rnd
       position={{ x, y }}
@@ -185,6 +187,13 @@ export default function PlacedField({
       onResizeStop={handleResizeStop}
       className={`group cursor-move ${isSelected ? 'z-20' : 'z-10'}`}
     >
+      {debug && (
+        <span
+          className="absolute -top-3 left-0 text-[8px] font-mono font-bold bg-red-600 text-white px-1 leading-none whitespace-nowrap z-50 pointer-events-none"
+        >
+          {field.fieldType}·Y{Number(field.positionY).toFixed(1)}·X{Number(field.positionX).toFixed(1)}·H{Number(field.height).toFixed(1)}
+        </span>
+      )}
       <div
         className={[
           'relative w-full h-full border border-dashed flex items-center justify-center overflow-hidden',
