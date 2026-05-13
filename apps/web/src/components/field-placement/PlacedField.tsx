@@ -2,8 +2,14 @@
 
 import { Rnd } from 'react-rnd';
 import type { FieldPosition } from '@/components/pdf/types';
+import type { SnapLine } from '@/components/pdf/PdfViewer';
 import FieldTypeIcon from './FieldTypeIcon';
 import { getSignerColor } from './SignerColorMap';
+
+// Snap when the field's bottom edge is within this many percentage points
+// of a detected underline. ~1.5% of US Letter ≈ 12px, generous enough to
+// feel magnetic without grabbing the wrong line.
+const SNAP_THRESHOLD_PCT = 1.5;
 
 interface PlacedFieldProps {
   field: FieldPosition;
@@ -15,6 +21,27 @@ interface PlacedFieldProps {
   onDelete: (id: string) => void;
   isSelected: boolean;
   onSelect: (id: string) => void;
+  snapLines?: SnapLine[];
+}
+
+// Snap the field's BOTTOM to the nearest detected underline. Signatures and
+// printed text both sit *above* a signature line, so aligning the bottom is
+// the right anchor.
+function snapBottomY(
+  topYPct: number,
+  heightPct: number,
+  lines: SnapLine[],
+): number {
+  const bottom = topYPct + heightPct;
+  let best: { line: SnapLine; dist: number } | null = null;
+  for (const l of lines) {
+    const dist = Math.abs(l.yPercent - bottom);
+    if (dist <= SNAP_THRESHOLD_PCT && (best === null || dist < best.dist)) {
+      best = { line: l, dist };
+    }
+  }
+  if (!best) return topYPct;
+  return Math.max(0, Math.min(best.line.yPercent - heightPct, 100 - heightPct));
 }
 
 export default function PlacedField({
@@ -27,6 +54,7 @@ export default function PlacedField({
   onDelete,
   isSelected,
   onSelect,
+  snapLines = [],
 }: PlacedFieldProps) {
   const color = getSignerColor(signerIndex);
 
@@ -41,7 +69,9 @@ export default function PlacedField({
     data: { x: number; y: number }
   ) => {
     const newX = Math.max(0, Math.min((data.x / containerWidth) * 100, 100));
-    const newY = Math.max(0, Math.min((data.y / containerHeight) * 100, 100));
+    const rawY = Math.max(0, Math.min((data.y / containerHeight) * 100, 100));
+    const heightPct = Number(field.height);
+    const newY = snapBottomY(rawY, heightPct, snapLines);
     onUpdate(field.id, { positionX: newX, positionY: newY });
   };
 
@@ -55,7 +85,8 @@ export default function PlacedField({
     const newWidth = (parseFloat(ref.style.width) / containerWidth) * 100;
     const newHeight = (parseFloat(ref.style.height) / containerHeight) * 100;
     const newX = Math.max(0, Math.min((position.x / containerWidth) * 100, 100));
-    const newY = Math.max(0, Math.min((position.y / containerHeight) * 100, 100));
+    const rawY = Math.max(0, Math.min((position.y / containerHeight) * 100, 100));
+    const newY = snapBottomY(rawY, newHeight, snapLines);
     onUpdate(field.id, {
       positionX: newX,
       positionY: newY,

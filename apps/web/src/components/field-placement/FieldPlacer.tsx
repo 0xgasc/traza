@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import PdfViewer from '@/components/pdf/PdfViewer';
+import PdfViewer, { type SnapLine } from '@/components/pdf/PdfViewer';
 import FieldToolbar from './FieldToolbar';
 import PlacedField from './PlacedField';
 import FieldPropertiesPanel from './FieldPropertiesPanel';
@@ -48,6 +48,7 @@ export default function FieldPlacer({
   const [, setCurrentPage] = useState(1);
   const [scale] = useState(1.0);
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [snapLines, setSnapLines] = useState<SnapLine[]>([]);
   const loadedRef = useRef(false);
   const onReadyCalled = useRef(false);
 
@@ -103,6 +104,8 @@ export default function FieldPlacer({
     (pageNumber: number) => {
       const pageFields = fields.filter((f) => f.page === pageNumber);
 
+      const pageSnapLines = snapLines.filter((l) => l.page === pageNumber);
+
       return (
         <PageOverlay
           pageNumber={pageNumber}
@@ -116,6 +119,7 @@ export default function FieldPlacer({
           onDelete={removeField}
           onSelect={setSelectedFieldId}
           onAddField={addField}
+          snapLines={pageSnapLines}
         />
       );
     },
@@ -129,6 +133,7 @@ export default function FieldPlacer({
       updateField,
       removeField,
       addField,
+      snapLines,
     ]
   );
 
@@ -167,6 +172,8 @@ export default function FieldPlacer({
           renderOverlay={renderOverlayWithDimensions}
           className="h-full"
           authToken={authToken}
+          onSnapLinesDetected={setSnapLines}
+          showSnapGuides={true}
         />
         <FieldPropertiesPanel
           field={selectedField}
@@ -194,6 +201,7 @@ interface PageOverlayProps {
   onDelete: (id: string) => void;
   onSelect: (id: string) => void;
   onAddField: (fieldType: string, page: number, signerEmail: string, signerName?: string, posX?: number, posY?: number) => void;
+  snapLines: SnapLine[];
 }
 
 function PageOverlay({
@@ -208,6 +216,7 @@ function PageOverlay({
   onDelete,
   onSelect,
   onAddField,
+  snapLines,
 }: PageOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
@@ -247,7 +256,21 @@ function PageOverlay({
     };
     const { w, h } = sizeByTool[activeTool.toLowerCase()] ?? { w: 16, h: 3 };
     const posX = Math.max(0, Math.min(rawX - w / 2, 100 - w));
-    const posY = Math.max(0, Math.min(rawY - h / 2, 100 - h));
+    // If the click is near a detected underline, place the field so its
+    // bottom sits on that line — otherwise center on the click point.
+    const centeredY = rawY - h / 2;
+    let best: { y: number; dist: number } | null = null;
+    for (const l of snapLines) {
+      const candidateTop = l.yPercent - h;
+      const dist = Math.abs((candidateTop + h) - rawY);
+      if (dist <= 4 && (best === null || dist < best.dist)) {
+        best = { y: candidateTop, dist };
+      }
+    }
+    const posY = Math.max(
+      0,
+      Math.min(best ? best.y : centeredY, 100 - h),
+    );
 
     const signer = signers[selectedSignerIndex];
     onAddField(activeTool, pageNumber, signer.email, signer.name, posX, posY);
@@ -280,6 +303,7 @@ function PageOverlay({
               onDelete={onDelete}
               isSelected={selectedFieldId === field.id}
               onSelect={onSelect}
+              snapLines={snapLines}
             />
           );
         })}

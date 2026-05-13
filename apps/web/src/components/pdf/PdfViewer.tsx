@@ -21,6 +21,17 @@ interface PDFDocument {
 interface PDFPage {
   getViewport: (options: { scale: number }) => { width: number; height: number };
   render: (options: { canvasContext: CanvasRenderingContext2D; viewport: { width: number; height: number } }) => { promise: Promise<void> };
+  getTextContent: () => Promise<{ items: Array<{ str: string; transform: number[]; width: number; height: number }> }>;
+}
+
+// A horizontal underline detected in the PDF. yPercent is the line's vertical
+// position as a fraction of page height; xStartPercent/xEndPercent are the
+// horizontal extent.
+export interface SnapLine {
+  page: number;
+  yPercent: number;
+  xStartPercent: number;
+  xEndPercent: number;
 }
 
 interface PdfViewerProps {
@@ -30,6 +41,8 @@ interface PdfViewerProps {
   renderOverlay?: (pageNumber: number) => ReactNode;
   className?: string;
   authToken?: string; // JWT token for authenticated PDF endpoints
+  onSnapLinesDetected?: (lines: SnapLine[]) => void;
+  showSnapGuides?: boolean;
 }
 
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs';
@@ -50,6 +63,8 @@ export default function PdfViewer({
   renderOverlay,
   className = '',
   authToken,
+  onSnapLinesDetected,
+  showSnapGuides = false,
 }: PdfViewerProps) {
   const [pdfjsLoaded, setPdfjsLoaded] = useState(false);
   const [numPages, setNumPages] = useState(0);
@@ -296,6 +311,68 @@ export default function PdfViewer({
     };
   }, [numPages, scaleProp, containerWidth, userZoom]);
 
+  // Detect underline-shaped text runs (3+ underscores) on every page and
+  // expose them as snap targets. Runs once per loaded document.
+  const [snapLines, setSnapLines] = useState<SnapLine[]>([]);
+  const onSnapLinesDetectedRef = useRef(onSnapLinesDetected);
+  useEffect(() => {
+    onSnapLinesDetectedRef.current = onSnapLinesDetected;
+  }, [onSnapLinesDetected]);
+  useEffect(() => {
+    if (!pdfDocRef.current || numPages === 0) return;
+    let cancelled = false;
+
+    async function detect() {
+      const pdfDoc = pdfDocRef.current;
+      if (!pdfDoc) return;
+      const all: SnapLine[] = [];
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        try {
+          const page = await pdfDoc.getPage(pageNum);
+          const tc = await page.getTextContent();
+          const vp = page.getViewport({ scale: 1 });
+          for (const item of tc.items) {
+            if (!item.str) continue;
+            const underscoreCount = (item.str.match(/_/g) || []).length;
+            if (underscoreCount < 3) continue;
+            // item.transform is [a, b, c, d, e, f]; e/f are the text origin
+            // (baseline) in PDF user space — y is bottom-up.
+            const [, , , , x, y] = item.transform;
+            const yFromTop = vp.height - y;
+            const yPercent = (yFromTop / vp.height) * 100;
+            // Estimate underline horizontal extent. If the item is mostly
+            // underscores, use its full width; otherwise approximate using the
+            // proportion of underscores at the trailing end (handles labels
+            // like "Signature: _______").
+            const ratio = underscoreCount / item.str.length;
+            const trailingUs = item.str.length - item.str.replace(/_+$/, '').length;
+            const usableFraction = ratio > 0.7 ? 1 : trailingUs / item.str.length;
+            const usableWidth = item.width * usableFraction;
+            const xStart = x + (item.width - usableWidth);
+            const xEnd = x + item.width;
+            all.push({
+              page: pageNum,
+              yPercent,
+              xStartPercent: (xStart / vp.width) * 100,
+              xEndPercent: (xEnd / vp.width) * 100,
+            });
+          }
+        } catch (err) {
+          // Ignore — pages without extractable text just don't get snap targets
+          console.warn(`[PdfViewer] snap-line detect failed for page ${pageNum}:`, err);
+        }
+      }
+      if (!cancelled) {
+        setSnapLines(all);
+        onSnapLinesDetectedRef.current?.(all);
+      }
+    }
+    detect();
+    return () => {
+      cancelled = true;
+    };
+  }, [numPages]);
+
   // Anchor the scroll position to the visual center of the viewport during zoom,
   // so the user stays roughly where they were instead of being flung around.
   const scrollAnchorRef = useRef<{ xFrac: number; yFrac: number } | null>(null);
@@ -464,6 +541,22 @@ export default function PdfViewer({
                 style={dims ? { width: dims.width, height: dims.height } : undefined}
               >
                 <canvas ref={setCanvasRef(pageNumber)} className="block max-w-full h-auto" />
+                {/* Snap-line guides — render faint blue underlays so users see
+                    where fields will snap to. Only when showSnapGuides=true
+                    (prepare view); hidden in signing. */}
+                {showSnapGuides && dims && snapLines
+                  .filter((l) => l.page === pageNumber)
+                  .map((line, idx) => (
+                    <div
+                      key={`snap-${pageNumber}-${idx}`}
+                      className="absolute pointer-events-none border-t border-dashed border-blue-400/40"
+                      style={{
+                        top: `${line.yPercent}%`,
+                        left: `${line.xStartPercent}%`,
+                        width: `${line.xEndPercent - line.xStartPercent}%`,
+                      }}
+                    />
+                  ))}
                 {/* Overlay for field positioning. Inset-0 alone (no inline
                     width/height) keeps the overlay coordinate space exactly
                     aligned with the canvas — both fill the same box. */}
