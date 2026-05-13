@@ -40,6 +40,14 @@ export default function SendForSigningPage() {
   useEffect(() => {
     async function fetchSigners() {
       try {
+        // Block this page for non-DRAFT docs — the /send endpoint requires
+        // DRAFT, so otherwise the form would let the user fill out everything
+        // only to fail at submit time.
+        const doc = await apiGet<{ status: string }>("/api/v1/documents/" + id);
+        if (doc.status !== "DRAFT") {
+          router.replace("/documents/" + id);
+          return;
+        }
         const fields = await apiGet<FieldData[]>("/api/v1/documents/" + id + "/fields");
 
         const signerMap = new Map<string, { email: string; count: number }>();
