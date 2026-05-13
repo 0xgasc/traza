@@ -59,9 +59,14 @@ export default function SignatureFieldInput({
       <button
         type="button"
         onClick={() => setModalOpen(true)}
-        className="w-full h-full cursor-pointer focus:outline-none"
+        className="w-full h-full cursor-pointer focus:outline-none relative"
         data-field-id={fieldId}
       >
+        {/* Invisible expanded hit area — makes a tiny signature box easy to
+            tap on mobile without changing the saved field size. */}
+        {!value && (
+          <span aria-hidden className="absolute -inset-3 sm:-inset-1" />
+        )}
         {value ? (
           <div className="w-full h-full bg-transparent flex items-center justify-center overflow-hidden">
             <img
@@ -71,8 +76,8 @@ export default function SignatureFieldInput({
             />
           </div>
         ) : (
-          <div className="w-full h-full bg-yellow-100/50 hover:bg-yellow-200/70 flex items-center justify-center animate-pulse transition-colors overflow-hidden">
-            <span className="text-[10px] leading-none text-stone-700 select-none">✍</span>
+          <div className="w-full h-full bg-yellow-100/50 hover:bg-yellow-200/70 flex items-end justify-center animate-pulse transition-colors overflow-hidden relative">
+            <span className="text-[9px] leading-none text-stone-700 select-none">✍</span>
           </div>
         )}
       </button>

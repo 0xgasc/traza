@@ -94,6 +94,9 @@ export default function DateFieldInput({
       onClick={handleClick}
       data-field-id={fieldId}
     >
+      {!value && (
+        <span aria-hidden className="absolute -inset-3 sm:-inset-1" />
+      )}
       {value ? (
         <div className="w-full h-full bg-transparent flex items-center px-1 hover:bg-stone-50/60 transition-colors overflow-hidden">
           <span className="font-mono font-semibold text-black whitespace-nowrap" style={fontStyle}>
@@ -101,8 +104,8 @@ export default function DateFieldInput({
           </span>
         </div>
       ) : (
-        <div className="w-full h-full bg-yellow-100/50 hover:bg-yellow-200/70 flex items-center justify-center transition-colors overflow-hidden">
-          <span className="text-[10px] leading-none text-stone-700 select-none">📅</span>
+        <div className="w-full h-full bg-yellow-100/50 hover:bg-yellow-200/70 flex items-end justify-center transition-colors overflow-hidden">
+          <span className="text-[9px] leading-none text-stone-700 select-none">📅</span>
         </div>
       )}
 

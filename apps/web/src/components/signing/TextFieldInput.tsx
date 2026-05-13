@@ -55,7 +55,14 @@ export default function TextFieldInput({
   }
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col relative">
+      {/* Invisible expanded hit area for mobile — taps just outside the
+          input still focus it. Disabled on sm+ where mouse precision is fine. */}
+      <span
+        aria-hidden
+        className="absolute -inset-3 sm:-inset-0"
+        onClick={() => inputRef.current?.focus()}
+      />
       <input
         ref={inputRef}
         type="text"
@@ -66,7 +73,7 @@ export default function TextFieldInput({
         placeholder={label || 'Enter text'}
         data-field-id={fieldId}
         style={fontStyle}
-        className="flex-1 min-w-0 w-full border-0 bg-yellow-100/50 hover:bg-yellow-200/70 focus:bg-white px-1 font-semibold focus:outline-none transition-colors placeholder:text-stone-500 placeholder:font-normal"
+        className="flex-1 min-w-0 w-full border-0 bg-yellow-100/50 hover:bg-yellow-200/70 focus:bg-white px-1 font-semibold focus:outline-none transition-colors placeholder:text-stone-500 placeholder:font-normal relative"
       />
     </div>
   );
