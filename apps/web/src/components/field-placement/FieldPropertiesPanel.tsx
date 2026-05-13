@@ -29,21 +29,27 @@ export default function FieldPropertiesPanel({
 
   const handleFitToLine = () => {
     if (!field) return;
+    const py = Number(field.positionY);
+    const h = Number(field.height);
     const targetH = 2; // ~one line on a US Letter page
-    const centerY = field.positionY + field.height / 2;
+    const centerY = py + h / 2;
     const newY = Math.max(0, Math.min(centerY - targetH / 2, 100 - targetH));
     onUpdate(field.id, { height: targetH, positionY: newY });
   };
 
   const nudgeY = (deltaPct: number) => {
     if (!field) return;
-    const newY = Math.max(0, Math.min(field.positionY + deltaPct, 100 - field.height));
+    const py = Number(field.positionY);
+    const h = Number(field.height);
+    const newY = Math.max(0, Math.min(py + deltaPct, 100 - h));
     onUpdate(field.id, { positionY: newY });
   };
 
   const nudgeX = (deltaPct: number) => {
     if (!field) return;
-    const newX = Math.max(0, Math.min(field.positionX + deltaPct, 100 - field.width));
+    const px = Number(field.positionX);
+    const w = Number(field.width);
+    const newX = Math.max(0, Math.min(px + deltaPct, 100 - w));
     onUpdate(field.id, { positionX: newX });
   };
 
@@ -155,9 +161,9 @@ export default function FieldPropertiesPanel({
         {/* Position readout + nudge controls */}
         <div className="border-t-2 border-stone-200 pt-3 space-y-2">
           <div className="flex justify-between text-[10px] font-mono text-stone-600">
-            <span>X: {field.positionX.toFixed(1)}%</span>
-            <span>Y: {field.positionY.toFixed(1)}%</span>
-            <span>{field.width.toFixed(1)}×{field.height.toFixed(1)}%</span>
+            <span>X: {Number(field.positionX).toFixed(1)}%</span>
+            <span>Y: {Number(field.positionY).toFixed(1)}%</span>
+            <span>{Number(field.width).toFixed(1)}×{Number(field.height).toFixed(1)}%</span>
           </div>
           <div className="grid grid-cols-3 gap-1">
             <div />
