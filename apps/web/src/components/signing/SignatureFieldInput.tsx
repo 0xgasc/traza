@@ -63,7 +63,7 @@ export default function SignatureFieldInput({
         data-field-id={fieldId}
       >
         {value ? (
-          <div className="w-full h-full border-2 border-black bg-white flex items-center justify-center hover:border-stone-600 transition-colors">
+          <div className="w-full h-full bg-transparent flex items-center justify-center">
             <img
               src={value}
               alt="Signature"
@@ -71,8 +71,8 @@ export default function SignatureFieldInput({
             />
           </div>
         ) : (
-          <div className="w-full h-full border-3 border-dashed border-black bg-stone-50 flex items-center justify-center animate-pulse hover:bg-stone-100 transition-colors">
-            <span className="text-xs font-bold uppercase tracking-wide text-black">
+          <div className="w-full h-full border border-dashed border-stone-400 bg-stone-50/60 flex items-center justify-center animate-pulse hover:bg-stone-100 transition-colors">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-stone-600">
               CLICK TO SIGN
             </span>
           </div>

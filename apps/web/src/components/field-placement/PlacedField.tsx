@@ -69,8 +69,8 @@ export default function PlacedField({
       position={{ x, y }}
       size={{ width: w, height: h }}
       scale={scale}
-      minWidth={40}
-      minHeight={25}
+      minWidth={12}
+      minHeight={6}
       bounds="parent"
       onDragStart={() => onSelect(field.id)}
       onDragStop={handleDragStop}
@@ -79,7 +79,7 @@ export default function PlacedField({
     >
       <div
         className={[
-          'w-full h-full border-2 border-dashed flex items-center justify-between px-1',
+          'relative w-full h-full border border-dashed flex items-center justify-center',
           color.bg,
           color.border,
           color.text,
@@ -90,18 +90,15 @@ export default function PlacedField({
           onSelect(field.id);
         }}
       >
-        {/* Field content */}
-        <div className="flex items-center gap-1 overflow-hidden min-w-0">
-          <FieldTypeIcon fieldType={field.fieldType} />
-        </div>
+        <FieldTypeIcon fieldType={field.fieldType} />
 
-        {/* Delete button */}
+        {/* Delete button — floats outside top-right so it doesn't eat field space */}
         <button
           className={[
-            'flex-shrink-0 w-5 h-5 flex items-center justify-center',
-            'bg-black text-white text-xs font-bold leading-none',
+            'absolute -top-2 -right-2 w-4 h-4 flex items-center justify-center',
+            'bg-black text-white text-[10px] font-bold leading-none rounded-sm',
             'opacity-0 group-hover:opacity-100 transition-opacity',
-            'hover:bg-red-600',
+            'hover:bg-red-600 z-10',
           ].join(' ')}
           onClick={(e) => {
             e.stopPropagation();
@@ -109,7 +106,7 @@ export default function PlacedField({
           }}
           title="Remove field"
         >
-          X
+          ×
         </button>
       </div>
     </Rnd>

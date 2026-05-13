@@ -100,14 +100,23 @@ export function useFieldPlacement(documentId: string, fieldsEndpoint?: string): 
 
   const addField = useCallback(
     (fieldType: string, page: number, signerEmail: string, signerName?: string, posX?: number, posY?: number) => {
+      const ft = fieldType.toLowerCase();
+      const defaults: Record<string, { w: number; h: number }> = {
+        signature: { w: 18, h: 3 },
+        initials: { w: 6, h: 3 },
+        text: { w: 16, h: 2.5 },
+        date: { w: 10, h: 2.5 },
+        checkbox: { w: 2.5, h: 2.5 },
+      };
+      const { w, h } = defaults[ft] ?? { w: 16, h: 3 };
       const newField: FieldPosition = {
         id: generateId(),
         fieldType: fieldType as FieldPosition['fieldType'],
         page,
         positionX: posX ?? 35,
         positionY: posY ?? 40,
-        width: 20,
-        height: 5,
+        width: w,
+        height: h,
         signerEmail,
         signerName,
         required: true,

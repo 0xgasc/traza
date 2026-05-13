@@ -15,10 +15,14 @@ const FIELD_ICONS: Record<string, { icon: string; label: string }> = {
 export default function FieldTypeIcon({ fieldType }: FieldTypeIconProps) {
   const config = FIELD_ICONS[fieldType] || { icon: '?', label: fieldType };
 
+  // Icon-only — the label was forcing a visual minimum height and made
+  // tight signature-line fits impossible. Use the properties panel for naming.
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide">
-      <span className="text-sm">{config.icon}</span>
-      <span>{config.label}</span>
+    <span
+      className="inline-flex items-center justify-center text-[10px] font-bold leading-none opacity-70 select-none"
+      title={config.label}
+    >
+      {config.icon}
     </span>
   );
 }

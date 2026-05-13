@@ -39,6 +39,10 @@ const PDFJS_WORKER_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/
 const CONTAINER_PADDING_MOBILE = 16; // px each side
 const CONTAINER_PADDING_DESKTOP = 24;
 
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 3;
+const ZOOM_STEP = 0.25;
+
 export default function PdfViewer({
   pdfUrl,
   scale: scaleProp = 1.0,
@@ -54,7 +58,9 @@ export default function PdfViewer({
   const [pageDimensions, setPageDimensions] = useState<Record<number, { width: number; height: number }>>({});
   const [pdfData, setPdfData] = useState<ArrayBuffer | string | null>(null);
   const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [userZoom, setUserZoom] = useState(1);
   const blobUrlRef = useRef<string | null>(null);
+  const pinchStateRef = useRef<{ startDist: number; startZoom: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
@@ -251,11 +257,12 @@ export default function PdfViewer({
           // Get the viewport at the requested scale
           const desiredViewport = page.getViewport({ scale: scaleProp });
 
-          // If the page at desired scale is wider than the container, shrink to fit
-          let finalScale = scaleProp;
+          // Compute a base "fit-to-container" scale, then multiply by userZoom.
+          let fitScale = scaleProp;
           if (desiredViewport.width > availableWidth && availableWidth > 0) {
-            finalScale = (availableWidth / desiredViewport.width) * scaleProp;
+            fitScale = (availableWidth / desiredViewport.width) * scaleProp;
           }
+          const finalScale = fitScale * userZoom;
 
           const viewport = page.getViewport({ scale: finalScale });
           const outputScale = window.devicePixelRatio || 1;
@@ -288,7 +295,47 @@ export default function PdfViewer({
     return () => {
       cancelled = true;
     };
-  }, [numPages, scaleProp, containerWidth]);
+  }, [numPages, scaleProp, containerWidth, userZoom]);
+
+  const zoomIn = useCallback(() => {
+    setUserZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)));
+  }, []);
+  const zoomOut = useCallback(() => {
+    setUserZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)));
+  }, []);
+  const zoomReset = useCallback(() => setUserZoom(1), []);
+
+  // Pinch-to-zoom on touch devices
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchStateRef.current = {
+        startDist: Math.hypot(dx, dy),
+        startZoom: userZoom,
+      };
+    }
+  }, [userZoom]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const state = pinchStateRef.current;
+    if (e.touches.length === 2 && state) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const next = Math.max(
+        MIN_ZOOM,
+        Math.min(MAX_ZOOM, state.startZoom * (dist / state.startDist))
+      );
+      setUserZoom(+next.toFixed(2));
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length < 2) {
+      pinchStateRef.current = null;
+    }
+  }, []);
 
   const setCanvasRef = useCallback((pageNumber: number) => (el: HTMLCanvasElement | null) => {
     if (el) {
@@ -369,9 +416,43 @@ export default function PdfViewer({
   return (
     <div
       ref={containerRef}
-      className={`overflow-auto bg-stone-200 touch-pan-x touch-pan-y ${className}`}
+      className={`relative overflow-auto bg-stone-200 touch-pan-x touch-pan-y ${className}`}
       style={{ WebkitOverflowScrolling: 'touch' }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
+      {/* Zoom controls */}
+      <div className="sticky top-2 z-30 flex justify-end px-2 pointer-events-none">
+        <div className="pointer-events-auto inline-flex items-stretch gap-px bg-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          <button
+            type="button"
+            onClick={zoomOut}
+            disabled={userZoom <= MIN_ZOOM}
+            aria-label="Zoom out"
+            className="px-2.5 py-1 bg-white text-sm font-bold hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            onClick={zoomReset}
+            aria-label="Reset zoom"
+            className="px-2 py-1 bg-white text-[10px] font-bold uppercase tracking-wide tabular-nums hover:bg-stone-100 min-w-[3.5rem]"
+          >
+            {Math.round(userZoom * 100)}%
+          </button>
+          <button
+            type="button"
+            onClick={zoomIn}
+            disabled={userZoom >= MAX_ZOOM}
+            aria-label="Zoom in"
+            className="px-2.5 py-1 bg-white text-sm font-bold hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            +
+          </button>
+        </div>
+      </div>
       <div className="flex flex-col items-center gap-4 p-4 sm:gap-6 sm:p-6">
         {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNumber) => {
           const dims = pageDimensions[pageNumber];

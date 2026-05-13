@@ -89,14 +89,14 @@ export default function DateFieldInput({
       data-field-id={fieldId}
     >
       {value ? (
-        <div className="w-full h-full border-3 border-black bg-stone-50 flex items-center px-2 hover:bg-white transition-colors">
+        <div className="w-full h-full bg-transparent flex items-center px-1 hover:bg-stone-50/60 transition-colors">
           <span className="font-mono font-semibold text-sm text-black">
             {formatDate(value)}
           </span>
         </div>
       ) : (
-        <div className="w-full h-full border-3 border-dashed border-black bg-stone-50 flex items-center justify-center hover:bg-stone-100 transition-colors">
-          <span className="text-xs font-bold uppercase tracking-wide text-stone-500">
+        <div className="w-full h-full border border-dashed border-stone-400 bg-stone-50/60 flex items-center justify-center hover:bg-stone-100 transition-colors">
+          <span className="text-[10px] font-bold uppercase tracking-wide text-stone-600">
             CLICK FOR DATE
           </span>
         </div>

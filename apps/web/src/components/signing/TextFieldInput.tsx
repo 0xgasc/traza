@@ -63,7 +63,7 @@ export default function TextFieldInput({
         onKeyDown={handleKeyDown}
         placeholder={label || 'Enter text'}
         data-field-id={fieldId}
-        className="flex-1 min-w-0 w-full border-3 border-black bg-stone-50 px-2 py-1 font-semibold text-sm focus:outline-none focus:bg-white focus:border-stone-700 transition-colors placeholder:text-stone-400 placeholder:font-normal"
+        className="flex-1 min-w-0 w-full border border-dashed border-stone-400 bg-stone-50/60 px-2 py-1 font-semibold text-sm focus:outline-none focus:bg-white focus:border-solid focus:border-stone-700 transition-colors placeholder:text-stone-400 placeholder:font-normal"
       />
     </div>
   );

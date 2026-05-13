@@ -237,9 +237,17 @@ function PageOverlay({
     const rawX = ((e.clientX - rect.left) / rect.width) * 100;
     const rawY = ((e.clientY - rect.top) / rect.height) * 100;
 
-    // Center a 20×5% field on the click point, clamped to bounds
-    const posX = Math.max(0, Math.min(rawX - 10, 80));
-    const posY = Math.max(0, Math.min(rawY - 2.5, 95));
+    // Center the new field on the click point, sized per field type
+    const sizeByTool: Record<string, { w: number; h: number }> = {
+      signature: { w: 18, h: 3 },
+      initials: { w: 6, h: 3 },
+      text: { w: 16, h: 2.5 },
+      date: { w: 10, h: 2.5 },
+      checkbox: { w: 2.5, h: 2.5 },
+    };
+    const { w, h } = sizeByTool[activeTool.toLowerCase()] ?? { w: 16, h: 3 };
+    const posX = Math.max(0, Math.min(rawX - w / 2, 100 - w));
+    const posY = Math.max(0, Math.min(rawY - h / 2, 100 - h));
 
     const signer = signers[selectedSignerIndex];
     onAddField(activeTool, pageNumber, signer.email, signer.name, posX, posY);
