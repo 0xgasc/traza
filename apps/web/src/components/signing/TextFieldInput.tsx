@@ -63,7 +63,7 @@ export default function TextFieldInput({
         placeholder={label || 'Enter text'}
         data-field-id={fieldId}
         style={fontStyle}
-        className="flex-1 min-w-0 w-full border border-dashed border-stone-400 bg-stone-50/60 px-1 font-semibold focus:outline-none focus:bg-white focus:border-solid focus:border-stone-700 transition-colors placeholder:text-stone-400 placeholder:font-normal"
+        className="flex-1 min-w-0 w-full border-0 bg-yellow-100/50 hover:bg-yellow-200/70 focus:bg-white px-1 font-semibold focus:outline-none transition-colors placeholder:text-stone-500 placeholder:font-normal"
       />
     </div>
   );
