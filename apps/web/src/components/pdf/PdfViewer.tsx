@@ -60,7 +60,6 @@ export default function PdfViewer({
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [userZoom, setUserZoom] = useState(1);
   const blobUrlRef = useRef<string | null>(null);
-  const pinchStateRef = useRef<{ startDist: number; startZoom: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
@@ -297,45 +296,45 @@ export default function PdfViewer({
     };
   }, [numPages, scaleProp, containerWidth, userZoom]);
 
-  const zoomIn = useCallback(() => {
-    setUserZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)));
-  }, []);
-  const zoomOut = useCallback(() => {
-    setUserZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)));
-  }, []);
-  const zoomReset = useCallback(() => setUserZoom(1), []);
+  // Anchor the scroll position to the visual center of the viewport during zoom,
+  // so the user stays roughly where they were instead of being flung around.
+  const scrollAnchorRef = useRef<{ xFrac: number; yFrac: number } | null>(null);
 
-  // Pinch-to-zoom on touch devices
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 2) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      pinchStateRef.current = {
-        startDist: Math.hypot(dx, dy),
-        startZoom: userZoom,
-      };
-    }
+  const captureScrollAnchor = useCallback(() => {
+    const c = containerRef.current;
+    if (!c || c.scrollWidth === 0 || c.scrollHeight === 0) return;
+    scrollAnchorRef.current = {
+      xFrac: (c.scrollLeft + c.clientWidth / 2) / c.scrollWidth,
+      yFrac: (c.scrollTop + c.clientHeight / 2) / c.scrollHeight,
+    };
+  }, []);
+
+  // After zoom-triggered re-render, restore scroll so viewport center stays put
+  useEffect(() => {
+    const anchor = scrollAnchorRef.current;
+    if (!anchor) return;
+    const raf = requestAnimationFrame(() => {
+      const c = containerRef.current;
+      if (!c) return;
+      c.scrollLeft = anchor.xFrac * c.scrollWidth - c.clientWidth / 2;
+      c.scrollTop = anchor.yFrac * c.scrollHeight - c.clientHeight / 2;
+      scrollAnchorRef.current = null;
+    });
+    return () => cancelAnimationFrame(raf);
   }, [userZoom]);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    const state = pinchStateRef.current;
-    if (e.touches.length === 2 && state) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const dist = Math.hypot(dx, dy);
-      const next = Math.max(
-        MIN_ZOOM,
-        Math.min(MAX_ZOOM, state.startZoom * (dist / state.startDist))
-      );
-      setUserZoom(+next.toFixed(2));
-    }
-  }, []);
-
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length < 2) {
-      pinchStateRef.current = null;
-    }
-  }, []);
+  const zoomIn = useCallback(() => {
+    captureScrollAnchor();
+    setUserZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)));
+  }, [captureScrollAnchor]);
+  const zoomOut = useCallback(() => {
+    captureScrollAnchor();
+    setUserZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)));
+  }, [captureScrollAnchor]);
+  const zoomReset = useCallback(() => {
+    captureScrollAnchor();
+    setUserZoom(1);
+  }, [captureScrollAnchor]);
 
   const setCanvasRef = useCallback((pageNumber: number) => (el: HTMLCanvasElement | null) => {
     if (el) {
@@ -416,11 +415,8 @@ export default function PdfViewer({
   return (
     <div
       ref={containerRef}
-      className={`relative overflow-auto bg-stone-200 touch-pan-x touch-pan-y ${className}`}
+      className={`relative overflow-auto bg-stone-200 ${className}`}
       style={{ WebkitOverflowScrolling: 'touch' }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       {/* Zoom controls */}
       <div className="sticky top-2 z-30 flex justify-end px-2 pointer-events-none">

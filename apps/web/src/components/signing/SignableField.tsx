@@ -86,6 +86,7 @@ export default function SignableField({
             onFill={handleFill}
             label={field.label}
             disabled={disabled}
+            boxHeight={height}
           />
         );
       case 'date':
@@ -93,6 +94,7 @@ export default function SignableField({
           <DateFieldInput
             fieldId={field.id}
             value={value}
+            boxHeight={height}
             onFill={handleFill}
             disabled={disabled}
           />

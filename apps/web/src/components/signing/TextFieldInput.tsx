@@ -8,6 +8,7 @@ interface TextFieldInputProps {
   onFill: (value: string) => void;
   label?: string;
   disabled?: boolean;
+  boxHeight?: number;
 }
 
 export default function TextFieldInput({
@@ -16,7 +17,10 @@ export default function TextFieldInput({
   onFill,
   label,
   disabled = false,
+  boxHeight,
 }: TextFieldInputProps) {
+  const fontPx = boxHeight ? Math.max(8, Math.min(boxHeight * 0.7, 16)) : undefined;
+  const fontStyle = fontPx ? { fontSize: `${fontPx}px`, lineHeight: 1 } : undefined;
   const [localValue, setLocalValue] = useState(value || '');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -35,9 +39,9 @@ export default function TextFieldInput({
 
   if (disabled) {
     return (
-      <div className="w-full h-full flex items-center bg-stone-50/80 border border-stone-200 px-1">
+      <div className="w-full h-full flex items-center bg-stone-50/80 border border-stone-200 px-1 overflow-hidden">
         {value ? (
-          <span className="text-[11px] font-mono text-stone-700 truncate leading-tight">{value}</span>
+          <span className="font-mono text-stone-700 truncate" style={fontStyle}>{value}</span>
         ) : (
           <span className="text-[10px] font-bold uppercase tracking-wide text-stone-400">
             {label || 'TEXT'}
@@ -49,11 +53,6 @@ export default function TextFieldInput({
 
   return (
     <div className="w-full h-full flex flex-col">
-      {label && (
-        <span className="text-[9px] font-bold uppercase tracking-wide text-stone-500 leading-none mb-0.5 truncate">
-          {label}
-        </span>
-      )}
       <input
         ref={inputRef}
         type="text"
@@ -63,7 +62,8 @@ export default function TextFieldInput({
         onKeyDown={handleKeyDown}
         placeholder={label || 'Enter text'}
         data-field-id={fieldId}
-        className="flex-1 min-w-0 w-full border border-dashed border-stone-400 bg-stone-50/60 px-2 py-1 font-semibold text-sm focus:outline-none focus:bg-white focus:border-solid focus:border-stone-700 transition-colors placeholder:text-stone-400 placeholder:font-normal"
+        style={fontStyle}
+        className="flex-1 min-w-0 w-full border border-dashed border-stone-400 bg-stone-50/60 px-1 font-semibold focus:outline-none focus:bg-white focus:border-solid focus:border-stone-700 transition-colors placeholder:text-stone-400 placeholder:font-normal"
       />
     </div>
   );

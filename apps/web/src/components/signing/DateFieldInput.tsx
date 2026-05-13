@@ -7,6 +7,7 @@ interface DateFieldInputProps {
   value: string | null;
   onFill: (value: string) => void;
   disabled?: boolean;
+  boxHeight?: number;
 }
 
 function formatDate(dateStr: string): string {
@@ -35,7 +36,11 @@ export default function DateFieldInput({
   value,
   onFill,
   disabled = false,
+  boxHeight,
 }: DateFieldInputProps) {
+  // Scale font to ~70% of box height, clamped to a readable range
+  const fontPx = boxHeight ? Math.max(8, Math.min(boxHeight * 0.7, 18)) : undefined;
+  const fontStyle = fontPx ? { fontSize: `${fontPx}px`, lineHeight: 1 } : undefined;
   const [editing, setEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -72,7 +77,7 @@ export default function DateFieldInput({
     return (
       <div className="w-full h-full flex items-center justify-center bg-stone-50/80 border border-stone-200 px-1">
         {value ? (
-          <span className="text-[11px] font-mono text-stone-700 leading-tight">{formatDate(value)}</span>
+          <span className="font-mono text-stone-700 whitespace-nowrap" style={fontStyle}>{formatDate(value)}</span>
         ) : (
           <span className="text-[10px] font-bold uppercase tracking-wide text-stone-400">
             DATE
@@ -89,8 +94,8 @@ export default function DateFieldInput({
       data-field-id={fieldId}
     >
       {value ? (
-        <div className="w-full h-full bg-transparent flex items-center px-1 hover:bg-stone-50/60 transition-colors">
-          <span className="font-mono font-semibold text-sm text-black">
+        <div className="w-full h-full bg-transparent flex items-center px-1 hover:bg-stone-50/60 transition-colors overflow-hidden">
+          <span className="font-mono font-semibold text-black whitespace-nowrap" style={fontStyle}>
             {formatDate(value)}
           </span>
         </div>
