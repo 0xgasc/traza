@@ -80,27 +80,13 @@ export async function generateSignedPdf(documentId: string): Promise<Buffer> {
 
     await overlayField(pdfDoc, page, field.fieldType, field.fieldValue.value, x, y, width, height);
 
-    // For signature / initials fields, drop a small clickable verify
-    // attribution under the rendered signature so anyone can confirm.
+    // For signature fields, attach an invisible clickable link annotation
+    // over the signature image itself, so anyone tapping the signature in a
+    // PDF reader is taken to the public verify page. No visible stamp — the
+    // signature itself is the click target. Verify URL is also printed in
+    // the page footer for users who can't click PDF annotations.
     if (field.fieldType.toLowerCase() === 'signature' || field.fieldType.toLowerCase() === 'initials') {
-      const sig = await prisma.signature.findFirst({
-        where: { documentId, signerEmail: field.signerEmail ?? undefined, status: 'SIGNED' },
-        select: { signerName: true, signedAt: true },
-      });
-      if (sig?.signedAt) {
-        const stamp = `${sig.signerName} • ${sig.signedAt.toISOString().replace('T', ' ').slice(0, 16)} UTC • Verify`;
-        const stampSize = Math.max(6, Math.min(height * 0.18, 8));
-        const stampY = Math.max(2, y - stampSize - 2);
-        const stampWidth = helvetica.widthOfTextAtSize(stamp, stampSize);
-        page.drawText(stamp, {
-          x,
-          y: stampY,
-          size: stampSize,
-          font: helvetica,
-          color: rgb(0.1, 0.3, 0.7),
-        });
-        addLinkAnnotation(pdfDoc, page, x, stampY - 1, stampWidth, stampSize + 2, verifyUrl);
-      }
+      addLinkAnnotation(pdfDoc, page, x, y, width, height, verifyUrl);
     }
   }
 
