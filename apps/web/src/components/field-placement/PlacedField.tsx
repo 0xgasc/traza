@@ -3,8 +3,84 @@
 import { Rnd } from 'react-rnd';
 import type { FieldPosition } from '@/components/pdf/types';
 import type { SnapLine } from '@/components/pdf/PdfViewer';
-import FieldTypeIcon from './FieldTypeIcon';
 import { getSignerColor } from './SignerColorMap';
+
+const FIELD_GLYPHS: Record<string, string> = {
+  SIGNATURE: '✍',
+  INITIALS: 'I',
+  TEXT: 'T',
+  DATE: '📅',
+  CHECKBOX: '☑',
+};
+
+function todayShort(): string {
+  return new Date().toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+// Show roughly what the field will look like once filled — using the signer's
+// name for signature/initials previews, today's date for date, and the field
+// label (or "Sample text") for text. Sized to the box height so the user
+// can sanity-check fit before sending.
+function PreviewContent({
+  field,
+  boxHeightPx,
+}: {
+  field: FieldPosition;
+  boxHeightPx: number;
+}) {
+  const fontPx = Math.max(7, Math.min(boxHeightPx * 0.55, 12));
+  const fontStyle: React.CSSProperties = { fontSize: `${fontPx}px`, lineHeight: 1 };
+  const ft = field.fieldType.toUpperCase();
+
+  if (ft === 'SIGNATURE' || ft === 'INITIALS') {
+    const name = field.signerName || 'Signature';
+    const display = ft === 'INITIALS'
+      ? name.split(/\s+/).map((p) => p[0]).slice(0, 3).join('').toUpperCase() || 'AB'
+      : name;
+    return (
+      <span
+        className="italic font-semibold text-stone-800 truncate select-none px-1"
+        style={fontStyle}
+        title={`Preview: ${display}`}
+      >
+        {display}
+      </span>
+    );
+  }
+
+  if (ft === 'DATE') {
+    return (
+      <span
+        className="font-mono text-stone-800 whitespace-nowrap select-none px-1"
+        style={fontStyle}
+      >
+        {todayShort()}
+      </span>
+    );
+  }
+
+  if (ft === 'CHECKBOX') {
+    return (
+      <span className="text-stone-600 select-none" style={fontStyle}>
+        {FIELD_GLYPHS.CHECKBOX}
+      </span>
+    );
+  }
+
+  // TEXT and any unknown type
+  return (
+    <span
+      className="font-mono text-stone-600 truncate select-none px-1"
+      style={fontStyle}
+    >
+      {field.label || 'Sample text'}
+    </span>
+  );
+}
 
 // Snap when the field's bottom edge is within this many percentage points
 // of a detected underline. ~1.5% of US Letter ≈ 12px, generous enough to
@@ -110,7 +186,7 @@ export default function PlacedField({
     >
       <div
         className={[
-          'relative w-full h-full border border-dashed flex items-center justify-center',
+          'relative w-full h-full border border-dashed flex items-center justify-center overflow-hidden',
           color.bg,
           color.border,
           color.text,
@@ -121,7 +197,10 @@ export default function PlacedField({
           onSelect(field.id);
         }}
       >
-        <FieldTypeIcon fieldType={field.fieldType} />
+        <PreviewContent
+          field={field}
+          boxHeightPx={h}
+        />
 
         {/* Delete button — floats outside top-right so it doesn't eat field space */}
         <button

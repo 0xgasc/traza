@@ -38,9 +38,10 @@ export default function DateFieldInput({
   disabled = false,
   boxHeight,
 }: DateFieldInputProps) {
-  // Scale font to ~70% of box height, clamped to a readable range
-  const fontPx = boxHeight ? Math.max(8, Math.min(boxHeight * 0.7, 18)) : undefined;
-  const fontStyle = fontPx ? { fontSize: `${fontPx}px`, lineHeight: 1 } : undefined;
+  // Cap font at 12px to match TextFieldInput — keeps filled values
+  // proportional to surrounding PDF body text.
+  const fontPx = boxHeight ? Math.max(7, Math.min(boxHeight * 0.6, 12)) : 12;
+  const fontStyle = { fontSize: `${fontPx}px`, lineHeight: 1 };
   const [editing, setEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 

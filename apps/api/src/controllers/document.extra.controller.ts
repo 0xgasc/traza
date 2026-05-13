@@ -29,6 +29,72 @@ export async function verifyDocument(req: Request, res: Response, next: NextFunc
   }
 }
 
+// Public verification — no auth. Returns document integrity metadata plus
+// the signer list and blockchain anchor (if any). Designed to be the
+// landing page linked from the clickable signature attestation in the PDF.
+export async function publicVerifyDocument(req: Request, res: Response, next: NextFunction) {
+  try {
+    const document = await prisma.document.findUnique({
+      where: { id: req.params.id as string },
+      include: {
+        signatures: {
+          where: { status: 'SIGNED' },
+          orderBy: { signedAt: 'asc' },
+          select: {
+            signerName: true,
+            signerEmail: true,
+            signedAt: true,
+            signatureType: true,
+            order: true,
+          },
+        },
+        auditLogs: {
+          where: {
+            eventType: { in: ['document.sent', 'document.signed', 'document.completed', 'document.anchored'] },
+          },
+          orderBy: { timestamp: 'asc' },
+          select: {
+            eventType: true,
+            timestamp: true,
+          },
+        },
+      },
+    });
+
+    if (!document) {
+      throw new AppError(404, 'NOT_FOUND', 'Document not found');
+    }
+
+    success(res, {
+      documentId: document.id,
+      title: document.title,
+      status: document.status,
+      documentHash: document.fileHash,
+      hashAlgorithm: 'SHA-256',
+      createdAt: document.createdAt,
+      completedAt: document.status === 'SIGNED'
+        ? document.signatures.reduce<Date | null>(
+            (latest, s) => (s.signedAt && (!latest || s.signedAt > latest) ? s.signedAt : latest),
+            null,
+          )
+        : null,
+      signers: document.signatures,
+      blockchain: document.blockchainTxHash
+        ? {
+            network: document.blockchainNetwork ?? 'arweave',
+            txHash: document.blockchainTxHash,
+            url: document.blockchainNetwork === 'arweave' || !document.blockchainNetwork
+              ? `https://devnet.irys.xyz/${document.blockchainTxHash}`
+              : null,
+          }
+        : null,
+      audit: document.auditLogs,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function anchorDocument(req: Request, res: Response, next: NextFunction) {
   try {
     const result = await blockchainService.anchorDocument(req.params.id as string, req.user!.userId);

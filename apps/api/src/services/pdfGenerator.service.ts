@@ -107,7 +107,7 @@ async function overlayField(
       page.drawText(value, {
         x,
         y: y + height / 3, // Vertically center text
-        size: Math.min(height * 0.6, 12),
+        size: Math.max(7, Math.min(height * 0.6, 11)),
         color: rgb(0, 0, 0),
       });
       break;
@@ -131,7 +131,7 @@ async function overlayField(
       page.drawText(value, {
         x,
         y: y + height / 3,
-        size: Math.min(height * 0.6, 12),
+        size: Math.max(7, Math.min(height * 0.6, 11)),
         color: rgb(0, 0, 0),
       });
   }

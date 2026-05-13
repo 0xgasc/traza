@@ -187,6 +187,11 @@ app.post('/api/v1/documents/:id/anchor', requireAuth, extraController.anchorDocu
 app.post('/api/v1/documents/:id/proof', requireAuth, extraController.generateProof);
 app.get('/api/v1/documents/:id/certificate', requireAuth, extraController.getCertificate);
 
+// Public verification — anyone with a document ID (e.g. via the clickable
+// signature link in the signed PDF) can confirm the doc, signers, hash,
+// and blockchain anchor. No auth.
+app.get('/api/v1/verify/:id', extraController.publicVerifyDocument);
+
 // Dashboard
 app.get('/api/v1/dashboard/stats', requireAuth, extraController.getDashboardStats);
 

@@ -19,8 +19,11 @@ export default function TextFieldInput({
   disabled = false,
   boxHeight,
 }: TextFieldInputProps) {
-  const fontPx = boxHeight ? Math.max(8, Math.min(boxHeight * 0.7, 16)) : undefined;
-  const fontStyle = fontPx ? { fontSize: `${fontPx}px`, lineHeight: 1 } : undefined;
+  // Tighter cap — 12px max keeps filled text from dwarfing surrounding
+  // PDF body type (which is typically 10-11pt). 60% of box height feels
+  // proportional without leaving the value floating in a sea of yellow.
+  const fontPx = boxHeight ? Math.max(7, Math.min(boxHeight * 0.6, 12)) : 12;
+  const fontStyle = { fontSize: `${fontPx}px`, lineHeight: 1 };
   const [localValue, setLocalValue] = useState(value || '');
   const inputRef = useRef<HTMLInputElement>(null);
 
