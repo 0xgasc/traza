@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useCallback } from 'react';
 import type { FieldPosition } from '@/components/pdf/types';
 
 interface FieldPropertiesPanelProps {
@@ -37,21 +38,58 @@ export default function FieldPropertiesPanel({
     onUpdate(field.id, { height: targetH, positionY: newY });
   };
 
-  const nudgeY = (deltaPct: number) => {
-    if (!field) return;
-    const py = Number(field.positionY);
-    const h = Number(field.height);
-    const newY = Math.max(0, Math.min(py + deltaPct, 100 - h));
-    onUpdate(field.id, { positionY: newY });
-  };
+  // Read latest field via ref so the hold-to-repeat interval doesn't
+  // close over a stale field object.
+  const fieldRef = useRef<FieldPosition | null>(field);
+  fieldRef.current = field;
 
-  const nudgeX = (deltaPct: number) => {
-    if (!field) return;
-    const px = Number(field.positionX);
-    const w = Number(field.width);
+  const nudgeY = useCallback((deltaPct: number) => {
+    const f = fieldRef.current;
+    if (!f) return;
+    const py = Number(f.positionY);
+    const h = Number(f.height);
+    const newY = Math.max(0, Math.min(py + deltaPct, 100 - h));
+    onUpdate(f.id, { positionY: newY });
+  }, [onUpdate]);
+
+  const nudgeX = useCallback((deltaPct: number) => {
+    const f = fieldRef.current;
+    if (!f) return;
+    const px = Number(f.positionX);
+    const w = Number(f.width);
     const newX = Math.max(0, Math.min(px + deltaPct, 100 - w));
-    onUpdate(field.id, { positionX: newX });
+    onUpdate(f.id, { positionX: newX });
+  }, [onUpdate]);
+
+  // Press-and-hold to repeatedly nudge. First click fires once, then after
+  // a short delay we tick at ~12/sec so the user can scrub the field across
+  // the page without spamming the button.
+  const holdTimers = useRef<{ initial: ReturnType<typeof setTimeout> | null; interval: ReturnType<typeof setInterval> | null }>({
+    initial: null,
+    interval: null,
+  });
+  const startHold = (fn: () => void) => {
+    fn();
+    holdTimers.current.initial = setTimeout(() => {
+      holdTimers.current.interval = setInterval(fn, 80);
+    }, 350);
   };
+  const stopHold = () => {
+    if (holdTimers.current.initial) clearTimeout(holdTimers.current.initial);
+    if (holdTimers.current.interval) clearInterval(holdTimers.current.interval);
+    holdTimers.current = { initial: null, interval: null };
+  };
+  const arrowHandlers = (fn: () => void) => ({
+    onMouseDown: () => startHold(fn),
+    onMouseUp: stopHold,
+    onMouseLeave: stopHold,
+    onTouchStart: (e: React.TouchEvent) => {
+      e.preventDefault();
+      startHold(fn);
+    },
+    onTouchEnd: stopHold,
+    onTouchCancel: stopHold,
+  });
 
   return (
     <div className="absolute right-4 top-4 w-64 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] z-30">
@@ -165,19 +203,20 @@ export default function FieldPropertiesPanel({
             <span>Y: {Number(field.positionY).toFixed(1)}%</span>
             <span>{Number(field.width).toFixed(1)}×{Number(field.height).toFixed(1)}%</span>
           </div>
+          <p className="text-[9px] text-stone-500 -mt-1">Press & hold to scrub</p>
           <div className="grid grid-cols-3 gap-1">
             <div />
             <button
               type="button"
-              onClick={() => nudgeY(-0.5)}
-              className="px-2 py-1 text-sm font-bold border-2 border-black hover:bg-stone-100"
+              {...arrowHandlers(() => nudgeY(-1))}
+              className="px-2 py-3 text-lg font-bold border-2 border-black hover:bg-stone-100 select-none"
               title="Nudge up"
             >↑</button>
             <div />
             <button
               type="button"
-              onClick={() => nudgeX(-0.5)}
-              className="px-2 py-1 text-sm font-bold border-2 border-black hover:bg-stone-100"
+              {...arrowHandlers(() => nudgeX(-1))}
+              className="px-2 py-3 text-lg font-bold border-2 border-black hover:bg-stone-100 select-none"
               title="Nudge left"
             >←</button>
             <button
@@ -190,15 +229,15 @@ export default function FieldPropertiesPanel({
             </button>
             <button
               type="button"
-              onClick={() => nudgeX(0.5)}
-              className="px-2 py-1 text-sm font-bold border-2 border-black hover:bg-stone-100"
+              {...arrowHandlers(() => nudgeX(1))}
+              className="px-2 py-3 text-lg font-bold border-2 border-black hover:bg-stone-100 select-none"
               title="Nudge right"
             >→</button>
             <div />
             <button
               type="button"
-              onClick={() => nudgeY(0.5)}
-              className="px-2 py-1 text-sm font-bold border-2 border-black hover:bg-stone-100"
+              {...arrowHandlers(() => nudgeY(1))}
+              className="px-2 py-3 text-lg font-bold border-2 border-black hover:bg-stone-100 select-none"
               title="Nudge down"
             >↓</button>
             <div />
