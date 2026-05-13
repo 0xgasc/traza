@@ -75,9 +75,9 @@ export default function DateFieldInput({
 
   if (disabled) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-stone-50/80 border border-stone-200 px-1">
+      <div className="w-full h-full flex items-center px-1 overflow-hidden">
         {value ? (
-          <span className="font-mono text-stone-700 whitespace-nowrap" style={fontStyle}>{formatDate(value)}</span>
+          <span className="font-mono text-black whitespace-nowrap" style={fontStyle}>{formatDate(value)}</span>
         ) : (
           <span className="text-[10px] font-bold uppercase tracking-wide text-stone-400">
             DATE

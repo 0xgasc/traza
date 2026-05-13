@@ -418,8 +418,9 @@ export default function PdfViewer({
       className={`relative overflow-auto bg-stone-200 ${className}`}
       style={{ WebkitOverflowScrolling: 'touch' }}
     >
-      {/* Zoom controls */}
-      <div className="sticky top-2 z-30 flex justify-end px-2 pointer-events-none">
+      {/* Zoom controls — absolute inside the scroll container so they stay
+          glued to its top-right corner without taking layout space. */}
+      <div className="absolute top-2 right-2 z-30 pointer-events-none">
         <div className="pointer-events-auto inline-flex items-stretch gap-px bg-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
           <button
             type="button"

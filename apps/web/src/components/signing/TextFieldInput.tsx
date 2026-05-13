@@ -39,9 +39,9 @@ export default function TextFieldInput({
 
   if (disabled) {
     return (
-      <div className="w-full h-full flex items-center bg-stone-50/80 border border-stone-200 px-1 overflow-hidden">
+      <div className="w-full h-full flex items-center px-1 overflow-hidden">
         {value ? (
-          <span className="font-mono text-stone-700 truncate" style={fontStyle}>{value}</span>
+          <span className="font-mono text-black truncate" style={fontStyle}>{value}</span>
         ) : (
           <span className="text-[10px] font-bold uppercase tracking-wide text-stone-400">
             {label || 'TEXT'}
