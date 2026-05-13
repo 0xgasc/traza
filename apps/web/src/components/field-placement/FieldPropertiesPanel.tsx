@@ -35,6 +35,18 @@ export default function FieldPropertiesPanel({
     onUpdate(field.id, { height: targetH, positionY: newY });
   };
 
+  const nudgeY = (deltaPct: number) => {
+    if (!field) return;
+    const newY = Math.max(0, Math.min(field.positionY + deltaPct, 100 - field.height));
+    onUpdate(field.id, { positionY: newY });
+  };
+
+  const nudgeX = (deltaPct: number) => {
+    if (!field) return;
+    const newX = Math.max(0, Math.min(field.positionX + deltaPct, 100 - field.width));
+    onUpdate(field.id, { positionX: newX });
+  };
+
   return (
     <div className="absolute right-4 top-4 w-64 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] z-30">
       {/* Header */}
@@ -140,15 +152,52 @@ export default function FieldPropertiesPanel({
           </label>
         </div>
 
-        {/* Fit to single line */}
-        <button
-          type="button"
-          onClick={handleFitToLine}
-          className="w-full px-3 py-2 text-xs font-bold uppercase tracking-wide border-2 border-black bg-yellow-300 hover:bg-yellow-400 transition-colors"
-          title="Shrink to a single line height, keeping the field centered"
-        >
-          Fit to line
-        </button>
+        {/* Position readout + nudge controls */}
+        <div className="border-t-2 border-stone-200 pt-3 space-y-2">
+          <div className="flex justify-between text-[10px] font-mono text-stone-600">
+            <span>X: {field.positionX.toFixed(1)}%</span>
+            <span>Y: {field.positionY.toFixed(1)}%</span>
+            <span>{field.width.toFixed(1)}×{field.height.toFixed(1)}%</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            <div />
+            <button
+              type="button"
+              onClick={() => nudgeY(-0.5)}
+              className="px-2 py-1 text-sm font-bold border-2 border-black hover:bg-stone-100"
+              title="Nudge up"
+            >↑</button>
+            <div />
+            <button
+              type="button"
+              onClick={() => nudgeX(-0.5)}
+              className="px-2 py-1 text-sm font-bold border-2 border-black hover:bg-stone-100"
+              title="Nudge left"
+            >←</button>
+            <button
+              type="button"
+              onClick={handleFitToLine}
+              className="px-1 text-[9px] font-bold uppercase tracking-tight border-2 border-black bg-yellow-300 hover:bg-yellow-400"
+              title="Shrink height to single line, keep center"
+            >
+              Fit line
+            </button>
+            <button
+              type="button"
+              onClick={() => nudgeX(0.5)}
+              className="px-2 py-1 text-sm font-bold border-2 border-black hover:bg-stone-100"
+              title="Nudge right"
+            >→</button>
+            <div />
+            <button
+              type="button"
+              onClick={() => nudgeY(0.5)}
+              className="px-2 py-1 text-sm font-bold border-2 border-black hover:bg-stone-100"
+              title="Nudge down"
+            >↓</button>
+            <div />
+          </div>
+        </div>
       </div>
     </div>
   );
