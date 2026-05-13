@@ -8,6 +8,7 @@ declare global {
     pdfjsLib?: {
       GlobalWorkerOptions: { workerSrc: string };
       getDocument: (src: string | ArrayBuffer | { data: ArrayBuffer }) => { promise: Promise<PDFDocument> };
+      OPS?: Record<string, number>;
     };
   }
 }
@@ -22,7 +23,9 @@ interface PDFPage {
   getViewport: (options: { scale: number }) => { width: number; height: number };
   render: (options: { canvasContext: CanvasRenderingContext2D; viewport: { width: number; height: number } }) => { promise: Promise<void> };
   getTextContent: () => Promise<{ items: Array<{ str: string; transform: number[]; width: number; height: number }> }>;
+  getOperatorList: () => Promise<{ fnArray: number[]; argsArray: unknown[][] }>;
 }
+
 
 // A horizontal underline detected in the PDF. yPercent is the line's vertical
 // position as a fraction of page height; xStartPercent/xEndPercent are the
@@ -325,25 +328,20 @@ export default function PdfViewer({
     async function detect() {
       const pdfDoc = pdfDocRef.current;
       if (!pdfDoc) return;
+      const OPS = window.pdfjsLib?.OPS;
       const all: SnapLine[] = [];
       for (let pageNum = 1; pageNum <= numPages; pageNum++) {
         try {
           const page = await pdfDoc.getPage(pageNum);
-          const tc = await page.getTextContent();
           const vp = page.getViewport({ scale: 1 });
+          const tc = await page.getTextContent();
           for (const item of tc.items) {
             if (!item.str) continue;
             const underscoreCount = (item.str.match(/_/g) || []).length;
             if (underscoreCount < 3) continue;
-            // item.transform is [a, b, c, d, e, f]; e/f are the text origin
-            // (baseline) in PDF user space — y is bottom-up.
             const [, , , , x, y] = item.transform;
             const yFromTop = vp.height - y;
             const yPercent = (yFromTop / vp.height) * 100;
-            // Estimate underline horizontal extent. If the item is mostly
-            // underscores, use its full width; otherwise approximate using the
-            // proportion of underscores at the trailing end (handles labels
-            // like "Signature: _______").
             const ratio = underscoreCount / item.str.length;
             const trailingUs = item.str.length - item.str.replace(/_+$/, '').length;
             const usableFraction = ratio > 0.7 ? 1 : trailingUs / item.str.length;
@@ -357,14 +355,96 @@ export default function PdfViewer({
               xEndPercent: (xEnd / vp.width) * 100,
             });
           }
+
+          // Also scan the page's graphic operators for horizontal line
+          // segments — many contracts draw underlines as actual paths, not
+          // underscore characters. Catches moveTo(x,y) → lineTo(x2,y) pairs
+          // and very-thin rectangles (height < 2pt at scale 1).
+          if (OPS) {
+            try {
+              const ops = await page.getOperatorList();
+              let cursorX: number | null = null;
+              let cursorY: number | null = null;
+              const seen = new Map<number, { xStart: number; xEnd: number }>(); // key = rounded yPdf
+              for (let i = 0; i < ops.fnArray.length; i++) {
+                const fn = ops.fnArray[i];
+                const args = ops.argsArray[i] as unknown[];
+                if (fn === OPS.moveTo && args && args.length >= 2) {
+                  cursorX = args[0] as number;
+                  cursorY = args[1] as number;
+                } else if (fn === OPS.lineTo && args && args.length >= 2 && cursorX !== null && cursorY !== null) {
+                  const x2 = args[0] as number;
+                  const y2 = args[1] as number;
+                  // Horizontal segment in PDF user space (y bottom-up)
+                  if (Math.abs(y2 - cursorY) < 0.5 && Math.abs(x2 - cursorX) > 20) {
+                    const yPdf = (cursorY + y2) / 2;
+                    const key = Math.round(yPdf * 10) / 10;
+                    const xStartPdf = Math.min(cursorX, x2);
+                    const xEndPdf = Math.max(cursorX, x2);
+                    const existing = seen.get(key);
+                    if (existing) {
+                      existing.xStart = Math.min(existing.xStart, xStartPdf);
+                      existing.xEnd = Math.max(existing.xEnd, xEndPdf);
+                    } else {
+                      seen.set(key, { xStart: xStartPdf, xEnd: xEndPdf });
+                    }
+                  }
+                  cursorX = x2;
+                  cursorY = y2;
+                } else if (fn === OPS.rectangle && args && args.length >= 4) {
+                  // Args: [x, y, width, height]. Very flat rects = lines.
+                  const rx = args[0] as number;
+                  const ry = args[1] as number;
+                  const rw = args[2] as number;
+                  const rh = args[3] as number;
+                  if (Math.abs(rh) < 2 && Math.abs(rw) > 20) {
+                    const yPdf = ry + rh / 2;
+                    const key = Math.round(yPdf * 10) / 10;
+                    const xStartPdf = Math.min(rx, rx + rw);
+                    const xEndPdf = Math.max(rx, rx + rw);
+                    const existing = seen.get(key);
+                    if (existing) {
+                      existing.xStart = Math.min(existing.xStart, xStartPdf);
+                      existing.xEnd = Math.max(existing.xEnd, xEndPdf);
+                    } else {
+                      seen.set(key, { xStart: xStartPdf, xEnd: xEndPdf });
+                    }
+                  }
+                }
+              }
+              for (const [yPdf, span] of seen.entries()) {
+                const yFromTop = vp.height - yPdf;
+                all.push({
+                  page: pageNum,
+                  yPercent: (yFromTop / vp.height) * 100,
+                  xStartPercent: (span.xStart / vp.width) * 100,
+                  xEndPercent: (span.xEnd / vp.width) * 100,
+                });
+              }
+            } catch (err) {
+              console.warn(`[PdfViewer] op-list scan failed for page ${pageNum}:`, err);
+            }
+          }
         } catch (err) {
-          // Ignore — pages without extractable text just don't get snap targets
           console.warn(`[PdfViewer] snap-line detect failed for page ${pageNum}:`, err);
         }
       }
+      // Dedupe lines that are within 0.3% of each other (text + drawn line
+      // overlaps, or multiple operator-list paths overlap).
+      all.sort((a, b) => a.page - b.page || a.yPercent - b.yPercent);
+      const deduped: SnapLine[] = [];
+      for (const line of all) {
+        const last = deduped[deduped.length - 1];
+        if (last && last.page === line.page && Math.abs(last.yPercent - line.yPercent) < 0.3) {
+          last.xStartPercent = Math.min(last.xStartPercent, line.xStartPercent);
+          last.xEndPercent = Math.max(last.xEndPercent, line.xEndPercent);
+          continue;
+        }
+        deduped.push(line);
+      }
       if (!cancelled) {
-        setSnapLines(all);
-        onSnapLinesDetectedRef.current?.(all);
+        setSnapLines(deduped);
+        onSnapLinesDetectedRef.current?.(deduped);
       }
     }
     detect();
