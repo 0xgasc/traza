@@ -87,10 +87,13 @@ export default function SigningView({
   // We use a MutationObserver-style approach: measure page overlay containers
   const overlayRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
+  // Track ResizeObservers so we can clean them up when overlay elements unmount.
+  const overlayObservers = useRef<Map<number, ResizeObserver>>(new Map());
+
   const measureOverlay = useCallback((pageNumber: number, el: HTMLDivElement | null) => {
     if (el) {
       overlayRefs.current.set(pageNumber, el);
-      // Read dimensions from the parent (the PdfPage overlay container sets width/height)
+
       const measure = () => {
         const rect = el.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
@@ -110,31 +113,30 @@ export default function SigningView({
           });
         }
       };
-      // Measure after a short delay to ensure PDF page has rendered
+
+      // Measure immediately and then keep tracking. The canvas resizes when
+      // pdf.js finishes rendering — without a ResizeObserver, fields end up
+      // positioned against a stale (smaller) container height and drift down
+      // the page. The prepare view already does this; we were missing it.
       measure();
-      const timer = setTimeout(measure, 500);
-      return () => clearTimeout(timer);
+      const observer = new ResizeObserver(measure);
+      observer.observe(el);
+      overlayObservers.current.get(pageNumber)?.disconnect();
+      overlayObservers.current.set(pageNumber, observer);
     } else {
       overlayRefs.current.delete(pageNumber);
+      overlayObservers.current.get(pageNumber)?.disconnect();
+      overlayObservers.current.delete(pageNumber);
     }
   }, []);
 
-  // Remeasure on window resize
+  // Disconnect all observers on unmount
   useEffect(() => {
-    const handleResize = () => {
-      overlayRefs.current.forEach((el, pageNumber) => {
-        const rect = el.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          setPageDimensions((prev) => ({
-            ...prev,
-            [pageNumber]: { width: rect.width, height: rect.height },
-          }));
-        }
-      });
+    const observers = overlayObservers.current;
+    return () => {
+      observers.forEach((o) => o.disconnect());
+      observers.clear();
     };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const handleFill = useCallback(
