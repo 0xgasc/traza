@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   title: "Traza — Contracts, signed with proof.",
   description:
     "Modern e-signature platform with cryptographic verification and blockchain anchoring.",
+  icons: {
+    icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='black'/%3E%3Ctext x='50' y='72' font-size='72' font-weight='900' font-family='system-ui,sans-serif' text-anchor='middle' fill='white'%3ET%3C/text%3E%3C/svg%3E",
+  },
 };
 
 export default async function LocaleLayout({

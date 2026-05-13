@@ -5,9 +5,10 @@
  * onto the original document at their specified positions.
  */
 
-import { PDFDocument, rgb, PDFPage } from 'pdf-lib';
+import { PDFDocument, rgb, PDFPage, PDFName, PDFString, StandardFonts } from 'pdf-lib';
 import { prisma } from '@traza/database';
 import { logger } from '../config/logger.js';
+import { getEnv } from '../config/env.js';
 import * as storage from './storage.service.js';
 
 interface FieldValue {
@@ -52,6 +53,10 @@ export async function generateSignedPdf(documentId: string): Promise<Buffer> {
 
   const pdfDoc = await PDFDocument.load(originalPdfBuffer);
   const pages = pdfDoc.getPages();
+  const env = getEnv();
+  const verifyUrl = `${env.APP_URL}/en/verify/${documentId}`;
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   // Overlay each field value
   for (const field of document.fields) {
@@ -74,11 +79,102 @@ export async function generateSignedPdf(documentId: string): Promise<Buffer> {
     const height = (h / 100) * pageHeight;
 
     await overlayField(pdfDoc, page, field.fieldType, field.fieldValue.value, x, y, width, height);
+
+    // For signature / initials fields, drop a small clickable verify
+    // attribution under the rendered signature so anyone can confirm.
+    if (field.fieldType.toLowerCase() === 'signature' || field.fieldType.toLowerCase() === 'initials') {
+      const sig = await prisma.signature.findFirst({
+        where: { documentId, signerEmail: field.signerEmail ?? undefined, status: 'SIGNED' },
+        select: { signerName: true, signedAt: true },
+      });
+      if (sig?.signedAt) {
+        const stamp = `${sig.signerName} • ${sig.signedAt.toISOString().replace('T', ' ').slice(0, 16)} UTC • Verify`;
+        const stampSize = Math.max(6, Math.min(height * 0.18, 8));
+        const stampY = Math.max(2, y - stampSize - 2);
+        const stampWidth = helvetica.widthOfTextAtSize(stamp, stampSize);
+        page.drawText(stamp, {
+          x,
+          y: stampY,
+          size: stampSize,
+          font: helvetica,
+          color: rgb(0.1, 0.3, 0.7),
+        });
+        addLinkAnnotation(pdfDoc, page, x, stampY - 1, stampWidth, stampSize + 2, verifyUrl);
+      }
+    }
+  }
+
+  // Footer on the LAST page with the verification URL and document ID
+  const lastPage = pages[pages.length - 1];
+  if (lastPage) {
+    const { width: pw } = lastPage.getSize();
+    const footerSize = 7;
+    const footerY = 18;
+    const docIdLine = `Document ID: ${documentId}`;
+    const verifyLine = `Verify at ${env.APP_URL}/en/verify/${documentId}`;
+    const verifyWidth = helveticaBold.widthOfTextAtSize(verifyLine, footerSize);
+    const docIdWidth = helvetica.widthOfTextAtSize(docIdLine, footerSize);
+    lastPage.drawText(docIdLine, {
+      x: (pw - docIdWidth) / 2,
+      y: footerY + 10,
+      size: footerSize,
+      font: helvetica,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    lastPage.drawText(verifyLine, {
+      x: (pw - verifyWidth) / 2,
+      y: footerY,
+      size: footerSize,
+      font: helveticaBold,
+      color: rgb(0.1, 0.3, 0.7),
+    });
+    addLinkAnnotation(
+      pdfDoc,
+      lastPage,
+      (pw - verifyWidth) / 2,
+      footerY - 1,
+      verifyWidth,
+      footerSize + 2,
+      verifyUrl,
+    );
   }
 
   // Save the PDF
   const signedPdfBytes = await pdfDoc.save();
   return Buffer.from(signedPdfBytes);
+}
+
+/**
+ * Attach a clickable URI annotation to a region of a page. pdf-lib doesn't
+ * expose this directly, so we drop down to the raw annotation dict.
+ */
+function addLinkAnnotation(
+  pdfDoc: PDFDocument,
+  page: PDFPage,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  url: string,
+): void {
+  const link = pdfDoc.context.obj({
+    Type: 'Annot',
+    Subtype: 'Link',
+    Rect: [x, y, x + width, y + height],
+    Border: [0, 0, 0],
+    A: {
+      Type: 'Action',
+      S: 'URI',
+      URI: PDFString.of(url),
+    },
+  });
+  const linkRef = pdfDoc.context.register(link);
+  const annots = page.node.lookup(PDFName.of('Annots'));
+  if (annots && 'push' in annots) {
+    (annots as { push: (ref: unknown) => void }).push(linkRef);
+  } else {
+    page.node.set(PDFName.of('Annots'), pdfDoc.context.obj([linkRef]));
+  }
 }
 
 /**

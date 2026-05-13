@@ -132,7 +132,12 @@
         "completed": "Todas las firmas completas",
         "downloaded": "Descargado",
         "voided": "Anulado",
-        "anchored": "Anclado en blockchain"
+        "anchored": "Anclado en blockchain",
+        "expired": "Expirado",
+        "owner_expiry_warning": "Expira pronto",
+        "declined": "Rechazado",
+        "reminded": "Recordatorio enviado",
+        "fields_edited": "Campos editados"
       }
     }
   },

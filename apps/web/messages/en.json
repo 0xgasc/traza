@@ -132,7 +132,12 @@
         "completed": "All signatures complete",
         "downloaded": "Downloaded",
         "voided": "Voided",
-        "anchored": "Anchored to blockchain"
+        "anchored": "Anchored to blockchain",
+        "expired": "Expired",
+        "owner_expiry_warning": "Expiring soon",
+        "declined": "Declined",
+        "reminded": "Reminder sent",
+        "fields_edited": "Fields edited"
       }
     }
   },
