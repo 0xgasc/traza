@@ -291,6 +291,26 @@ export default function DocumentDetailPage() {
               Edit fields
             </Link>
             <button
+              onClick={async () => {
+                setActionLoading("remind-all");
+                try {
+                  const result = await apiPost<{ sent: number; failed: number; recipients: string[] }>(
+                    `/api/v1/documents/${id}/remind`,
+                    {},
+                  );
+                  showToast(`Reminder sent to ${result.sent} signer${result.sent === 1 ? "" : "s"}`);
+                } catch (err: unknown) {
+                  showToast(err instanceof Error ? err.message : "Failed to send reminders", false);
+                } finally {
+                  setActionLoading("");
+                }
+              }}
+              disabled={actionLoading !== ""}
+              className="btn-secondary disabled:opacity-40"
+            >
+              {actionLoading === "remind-all" ? "Sending..." : "Remind all"}
+            </button>
+            <button
               onClick={() => handleAction("void")}
               disabled={actionLoading !== ""}
               className="bg-red-600 text-white font-bold uppercase tracking-wide px-4 py-2 border-4 border-red-600 hover:bg-red-700 transition-colors text-sm disabled:opacity-40"

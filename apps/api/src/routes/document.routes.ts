@@ -58,6 +58,8 @@ router.post('/:id/void', authenticate, documentController.voidDocument);
 
 router.post('/:id/resend', authenticate, documentController.resendDocument);
 
+router.post('/:id/remind', authenticate, documentController.remindSigners);
+
 router.delete('/:id', authenticate, documentController.deleteDocument);
 
 router.get('/:id/recipients', authenticate, async (req, res, next) => {

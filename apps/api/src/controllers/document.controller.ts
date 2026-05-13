@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as documentService from '../services/document.service.js';
+import * as signatureService from '../services/signature.service.js';
 import { created, success, paginated } from '../utils/response.js';
 import { AppError } from '../middleware/error.middleware.js';
 import { DocumentStatus } from '@traza/database';
@@ -98,6 +99,18 @@ export async function deleteDocument(req: Request, res: Response, next: NextFunc
 export async function resendDocument(req: Request, res: Response, next: NextFunction) {
   try {
     const result = await documentService.resendDocument(req.params.id as string, req.user!.userId);
+    success(res, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function remindSigners(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await signatureService.remindPendingSigners(
+      req.params.id as string,
+      req.user!.userId,
+    );
     success(res, result);
   } catch (err) {
     next(err);

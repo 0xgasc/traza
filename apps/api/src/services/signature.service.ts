@@ -162,6 +162,78 @@ export async function sendForSigning({
   return { signatures: signatureRecords };
 }
 
+export async function remindPendingSigners(documentId: string, userId: string) {
+  const document = await prisma.document.findUnique({
+    where: { id: documentId },
+    include: {
+      owner: { select: { name: true } },
+    },
+  });
+
+  if (!document || document.ownerId !== userId) {
+    throw new AppError(404, 'NOT_FOUND', 'Document not found');
+  }
+
+  if (document.status !== 'PENDING') {
+    throw new AppError(400, 'INVALID_STATUS', 'Reminders can only be sent for PENDING documents');
+  }
+
+  // Email the signers whose turn it currently is — that's the lowest order
+  // group that still has any PENDING signatures.
+  const allSignatures = await prisma.signature.findMany({
+    where: { documentId },
+    orderBy: { order: 'asc' },
+  });
+
+  const currentOrder = allSignatures
+    .filter((s) => s.status === 'PENDING')
+    .map((s) => s.order)
+    .reduce<number | null>((min, o) => (min === null || o < min ? o : min), null);
+
+  if (currentOrder === null) {
+    throw new AppError(400, 'NO_PENDING_SIGNERS', 'No pending signers to remind');
+  }
+
+  const toRemind = allSignatures.filter(
+    (s) => s.status === 'PENDING' && s.order === currentOrder,
+  );
+
+  const env = getEnv();
+  const senderName = document.owner?.name ?? 'Someone';
+
+  const results = await Promise.allSettled(
+    toRemind.map((sig) =>
+      sendSignatureRequestEmail({
+        to: sig.signerEmail,
+        recipientName: sig.signerName,
+        senderName,
+        documentTitle: document.title,
+        signingUrl: `${env.APP_URL}/en/sign/${sig.token}`,
+        expiresAt: sig.tokenExpiresAt,
+        locale: document.emailLocale ?? 'en',
+      }),
+    ),
+  );
+
+  const sent = results.filter((r) => r.status === 'fulfilled').length;
+  const failed = results.length - sent;
+
+  await prisma.auditLog.create({
+    data: {
+      documentId,
+      eventType: 'document.reminded',
+      actorId: userId,
+      metadata: {
+        signers: toRemind.map((s) => s.signerEmail),
+        sent,
+        failed,
+      },
+    },
+  });
+
+  return { sent, failed, recipients: toRemind.map((s) => s.signerEmail) };
+}
+
 export async function getSigningContext(token: string) {
   const payload = verifySigningToken(token);
 
