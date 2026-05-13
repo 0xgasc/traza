@@ -77,10 +77,13 @@ export function useFieldPlacement(documentId: string, fieldsEndpoint?: string): 
         id: f.id,
         fieldType: f.fieldType,
         page: f.page,
-        positionX: f.positionX,
-        positionY: f.positionY,
-        width: f.width,
-        height: f.height,
+        // Prisma Decimal columns come back as JSON strings; coerce to Number so
+        // arithmetic (positionY + height, nudges, fit-to-line) doesn't silently
+        // string-concatenate.
+        positionX: Number(f.positionX),
+        positionY: Number(f.positionY),
+        width: Number(f.width),
+        height: Number(f.height),
         signerEmail: f.signerEmail,
         signerName: f.signerName,
         required: f.required ?? true,

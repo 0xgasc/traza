@@ -29,7 +29,15 @@ export async function getDocumentFields(documentId: string, userId: string) {
     orderBy: [{ page: 'asc' }, { order: 'asc' }],
   });
 
-  return fields;
+  // Coerce Prisma Decimal columns to plain numbers so the frontend can do
+  // arithmetic on them without string-concat surprises.
+  return fields.map((f) => ({
+    ...f,
+    positionX: Number(f.positionX),
+    positionY: Number(f.positionY),
+    width: Number(f.width),
+    height: Number(f.height),
+  }));
 }
 
 export async function saveDocumentFields(
@@ -123,10 +131,10 @@ export async function getSignerFields(token: string) {
     fieldType: field.fieldType,
     label: field.label,
     page: field.page,
-    xPercent: field.positionX,
-    yPercent: field.positionY,
-    widthPercent: field.width,
-    heightPercent: field.height,
+    xPercent: Number(field.positionX),
+    yPercent: Number(field.positionY),
+    widthPercent: Number(field.width),
+    heightPercent: Number(field.height),
     required: field.required,
     signerEmail: field.signerEmail,
     checkboxStyle: field.checkboxStyle,
