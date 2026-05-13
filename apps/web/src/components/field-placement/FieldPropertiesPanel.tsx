@@ -27,6 +27,14 @@ export default function FieldPropertiesPanel({
     onUpdate(field.id, { required });
   };
 
+  const handleFitToLine = () => {
+    if (!field) return;
+    const targetH = 2; // ~one line on a US Letter page
+    const centerY = field.positionY + field.height / 2;
+    const newY = Math.max(0, Math.min(centerY - targetH / 2, 100 - targetH));
+    onUpdate(field.id, { height: targetH, positionY: newY });
+  };
+
   return (
     <div className="absolute right-4 top-4 w-64 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] z-30">
       {/* Header */}
@@ -131,6 +139,16 @@ export default function FieldPropertiesPanel({
             </span>
           </label>
         </div>
+
+        {/* Fit to single line */}
+        <button
+          type="button"
+          onClick={handleFitToLine}
+          className="w-full px-3 py-2 text-xs font-bold uppercase tracking-wide border-2 border-black bg-yellow-300 hover:bg-yellow-400 transition-colors"
+          title="Shrink to a single line height, keeping the field centered"
+        >
+          Fit to line
+        </button>
       </div>
     </div>
   );

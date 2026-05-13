@@ -286,13 +286,18 @@ export default function DocumentDetailPage() {
         )}
 
         {doc.status === "PENDING" && (
-          <button
-            onClick={() => handleAction("void")}
-            disabled={actionLoading !== ""}
-            className="bg-red-600 text-white font-bold uppercase tracking-wide px-4 py-2 border-4 border-red-600 hover:bg-red-700 transition-colors text-sm disabled:opacity-40"
-          >
-            {actionLoading === "void" ? t("voiding") : t("voidDocument")}
-          </button>
+          <>
+            <Link href={prepareHref} className="btn-secondary">
+              Edit fields
+            </Link>
+            <button
+              onClick={() => handleAction("void")}
+              disabled={actionLoading !== ""}
+              className="bg-red-600 text-white font-bold uppercase tracking-wide px-4 py-2 border-4 border-red-600 hover:bg-red-700 transition-colors text-sm disabled:opacity-40"
+            >
+              {actionLoading === "void" ? t("voiding") : t("voidDocument")}
+            </button>
+          </>
         )}
 
         {["PENDING", "SIGNED", "EXPIRED", "VOID"].includes(doc.status) && (
