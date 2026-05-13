@@ -186,10 +186,14 @@ async function overlayField(
     case 'text':
     case 'date':
       // Draw text
+      // Baseline sits on the field bottom (which is snapped to the
+      // underline), so text reads as resting on the line — matching how
+      // hand-typed values like "05/12/2026" already render in source PDFs.
+      // Tiny +1pt clearance so descenders don't kiss the line itself.
       page.drawText(value, {
         x,
-        y: y + height / 3, // Vertically center text
-        size: Math.max(7, Math.min(height * 0.6, 11)),
+        y: y + 1,
+        size: Math.max(7, Math.min(height * 0.8, 11)),
         color: rgb(0, 0, 0),
       });
       break;
@@ -209,11 +213,11 @@ async function overlayField(
       break;
 
     default:
-      // Fallback: draw as text
+      // Fallback: draw as text (same baseline-on-underline rule)
       page.drawText(value, {
         x,
-        y: y + height / 3,
-        size: Math.max(7, Math.min(height * 0.6, 11)),
+        y: y + 1,
+        size: Math.max(7, Math.min(height * 0.8, 11)),
         color: rgb(0, 0, 0),
       });
   }
