@@ -49,6 +49,7 @@ export default function FieldPlacer({
   const [scale] = useState(1.0);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [snapLines, setSnapLines] = useState<SnapLine[]>([]);
+  const [snapEnabled, setSnapEnabled] = useState(true);
   const loadedRef = useRef(false);
   const onReadyCalled = useRef(false);
 
@@ -104,7 +105,7 @@ export default function FieldPlacer({
     (pageNumber: number) => {
       const pageFields = fields.filter((f) => f.page === pageNumber);
 
-      const pageSnapLines = snapLines.filter((l) => l.page === pageNumber);
+      const pageSnapLines = snapEnabled ? snapLines.filter((l) => l.page === pageNumber) : [];
 
       return (
         <PageOverlay
@@ -134,6 +135,7 @@ export default function FieldPlacer({
       removeField,
       addField,
       snapLines,
+      snapEnabled,
     ]
   );
 
@@ -163,6 +165,8 @@ export default function FieldPlacer({
         onSave={handleSave}
         saving={saving}
         isDirty={isDirty}
+        snapEnabled={snapEnabled}
+        onToggleSnap={() => setSnapEnabled((s) => !s)}
       />
       <div className="flex-1 overflow-hidden relative">
         <PdfViewer
@@ -173,7 +177,7 @@ export default function FieldPlacer({
           className="h-full"
           authToken={authToken}
           onSnapLinesDetected={setSnapLines}
-          showSnapGuides={true}
+          showSnapGuides={snapEnabled}
         />
         <FieldPropertiesPanel
           field={selectedField}
@@ -256,21 +260,11 @@ function PageOverlay({
     };
     const { w, h } = sizeByTool[activeTool.toLowerCase()] ?? { w: 16, h: 3 };
     const posX = Math.max(0, Math.min(rawX - w / 2, 100 - w));
-    // If the click is near a detected underline, place the field so its
-    // bottom sits on that line — otherwise center on the click point.
-    const centeredY = rawY - h / 2;
-    let best: { y: number; dist: number } | null = null;
-    for (const l of snapLines) {
-      const candidateTop = l.yPercent - h;
-      const dist = Math.abs((candidateTop + h) - rawY);
-      if (dist <= 4 && (best === null || dist < best.dist)) {
-        best = { y: candidateTop, dist };
-      }
-    }
-    const posY = Math.max(
-      0,
-      Math.min(best ? best.y : centeredY, 100 - h),
-    );
+    // Place the field's center on the click point — predictable and matches
+    // what the user sees their finger/cursor on. Snap-on-drag still helps for
+    // fine alignment; we don't want click-place to "teleport" fields to a
+    // nearby underline they weren't aiming for.
+    const posY = Math.max(0, Math.min(rawY - h / 2, 100 - h));
 
     const signer = signers[selectedSignerIndex];
     onAddField(activeTool, pageNumber, signer.email, signer.name, posX, posY);

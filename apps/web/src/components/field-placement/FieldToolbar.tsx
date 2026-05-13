@@ -20,6 +20,8 @@ interface FieldToolbarProps {
   onSave: () => void;
   saving: boolean;
   isDirty: boolean;
+  snapEnabled: boolean;
+  onToggleSnap: () => void;
 }
 
 export default function FieldToolbar({
@@ -31,6 +33,8 @@ export default function FieldToolbar({
   onSave,
   saving,
   isDirty,
+  snapEnabled,
+  onToggleSnap,
 }: FieldToolbarProps) {
   return (
     <div className="w-64 flex-shrink-0 bg-stone-50 border-r-4 border-black flex flex-col h-full overflow-y-auto">
@@ -107,6 +111,22 @@ export default function FieldToolbar({
             </div>
           </>
         )}
+      </div>
+
+      {/* Snap-to-line toggle */}
+      <div className="px-4 py-3 border-t-2 border-stone-300">
+        <label className="flex items-center justify-between cursor-pointer">
+          <span className="text-xs font-bold uppercase tracking-wide">Snap to line</span>
+          <input
+            type="checkbox"
+            checked={snapEnabled}
+            onChange={onToggleSnap}
+            className="w-4 h-4 border-2 border-black accent-black"
+          />
+        </label>
+        <p className="text-[10px] text-stone-500 mt-1 leading-tight">
+          Fields magnetize to detected underlines when dragging. Turn off for free placement.
+        </p>
       </div>
 
       {/* Save Button */}

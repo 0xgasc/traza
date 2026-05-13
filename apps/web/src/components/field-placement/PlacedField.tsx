@@ -83,9 +83,10 @@ function PreviewContent({
 }
 
 // Snap when the field's bottom edge is within this many percentage points
-// of a detected underline. ~1.5% of US Letter ≈ 12px, generous enough to
-// feel magnetic without grabbing the wrong line.
-const SNAP_THRESHOLD_PCT = 1.5;
+// of a detected underline. Kept tight (~0.8% ≈ 6px on US Letter) so the
+// field only snaps when the user is already aiming for a line — never
+// when they release between two close-together lines.
+const SNAP_THRESHOLD_PCT = 0.8;
 
 interface PlacedFieldProps {
   field: FieldPosition;
