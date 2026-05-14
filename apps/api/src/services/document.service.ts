@@ -6,6 +6,7 @@ import { generateStorageKey, validateMagicBytes } from '../utils/fileValidation.
 import { sendExpirationNoticeEmail } from './email.service.js';
 import { getEnv } from '../config/env.js';
 import { logger } from '../config/logger.js';
+import { assertDocumentAccess, getUserOrgRoles, pickPrimaryOrgId } from '../utils/orgAccess.js';
 import path from 'node:path';
 
 interface CreateDocumentInput {
@@ -28,10 +29,16 @@ export async function createDocument({ userId, file, title }: CreateDocumentInpu
   const storageKey = generateStorageKey(userId, file.originalname);
   await storage.uploadFile(file.buffer, storageKey, file.mimetype);
 
-  // Create database record
+  const organizationId = await pickPrimaryOrgId(userId);
+
+  // Create database record. We still write ownerId for back-compat with
+  // pre-org code paths, but organizationId + createdById are the
+  // authoritative fields going forward.
   const document = await prisma.document.create({
     data: {
       ownerId: userId,
+      organizationId,
+      createdById: userId,
       title,
       fileUrl: storageKey,
       fileHash,
@@ -59,7 +66,7 @@ export async function createDocument({ userId, file, title }: CreateDocumentInpu
 }
 
 export async function getDocument(id: string, userId: string) {
-  const document = await prisma.document.findUnique({
+  const raw = await prisma.document.findUnique({
     where: { id, deletedAt: null },
     include: {
       signatures: {
@@ -77,9 +84,7 @@ export async function getDocument(id: string, userId: string) {
     },
   });
 
-  if (!document || document.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const document = await assertDocumentAccess(raw, userId, 'read');
 
   // Load audit logs separately to avoid N+1 on heavy documents
   const auditLogs = await prisma.auditLog.findMany({
@@ -106,9 +111,17 @@ export async function listDocuments(
   const limit = Math.min(filters.limit || 20, 100);
   const skip = (page - 1) * limit;
 
+  // List everything the user can see: their own legacy docs + every doc
+  // belonging to any org they're a member of.
+  const orgs = await getUserOrgRoles(userId);
+  const orgIds = Array.from(orgs.keys());
+
   const where = {
-    ownerId: userId,
     deletedAt: null,
+    OR: [
+      { ownerId: userId },
+      ...(orgIds.length > 0 ? [{ organizationId: { in: orgIds } }] : []),
+    ],
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.search ? { title: { contains: filters.search, mode: 'insensitive' as const } } : {}),
     ...(filters.tagId ? { tags: { some: { tagId: filters.tagId } } } : {}),
@@ -132,11 +145,8 @@ export async function listDocuments(
 }
 
 export async function getDownloadUrl(id: string, userId: string) {
-  const document = await prisma.document.findUnique({ where: { id } });
-
-  if (!document || document.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const raw = await prisma.document.findUnique({ where: { id } });
+  const document = await assertDocumentAccess(raw, userId, 'read');
 
   // Use signed PDF if available, otherwise use original
   const fileKey = document.pdfFileUrl || document.fileUrl;
@@ -155,7 +165,7 @@ export async function getDownloadUrl(id: string, userId: string) {
 }
 
 export async function voidDocument(id: string, userId: string, reason?: string) {
-  const document = await prisma.document.findUnique({
+  const raw = await prisma.document.findUnique({
     where: { id },
     include: {
       owner: { select: { name: true, email: true } },
@@ -166,9 +176,7 @@ export async function voidDocument(id: string, userId: string, reason?: string) 
     },
   });
 
-  if (!document || document.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const document = await assertDocumentAccess(raw, userId, 'admin');
 
   if (document.status !== 'PENDING') {
     throw new AppError(400, 'INVALID_STATUS', 'Only pending documents can be voided');
@@ -222,16 +230,14 @@ export async function voidDocument(id: string, userId: string, reason?: string) 
 }
 
 export async function resendDocument(id: string, userId: string) {
-  const document = await prisma.document.findUnique({
+  const raw = await prisma.document.findUnique({
     where: { id },
     include: {
       fields: true,
     },
   });
 
-  if (!document || document.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const document = await assertDocumentAccess(raw, userId, 'admin');
 
   if (!['PENDING', 'EXPIRED', 'VOID', 'SIGNED'].includes(document.status)) {
     throw new AppError(400, 'INVALID_STATUS', 'Cannot resend a DRAFT document — send it first');
@@ -250,10 +256,13 @@ export async function resendDocument(id: string, userId: string) {
       });
     }
 
-    // Create new DRAFT document with the same file
+    // Create new DRAFT document with the same file. Keep the org owner of
+    // the original so teammates retain visibility on the resent copy.
     const newDoc = await tx.document.create({
       data: {
         ownerId: userId,
+        organizationId: document.organizationId,
+        createdById: userId,
         title: document.title,
         fileUrl: document.fileUrl,
         fileHash: document.fileHash,

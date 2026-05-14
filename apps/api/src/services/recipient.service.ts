@@ -1,18 +1,16 @@
 import { prisma } from '@traza/database';
-import { AppError } from '../middleware/error.middleware.js';
 import { sendDocumentCompletedEmail } from './email.service.js';
 import { getEnv } from '../config/env.js';
 import { logger } from '../config/logger.js';
+import { assertDocumentAccess } from '../utils/orgAccess.js';
 
 export async function addRecipients(
   documentId: string,
   userId: string,
   recipients: Array<{ email: string; name: string }>,
 ) {
-  const doc = await prisma.document.findUnique({ where: { id: documentId } });
-  if (!doc || doc.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const raw = await prisma.document.findUnique({ where: { id: documentId } });
+  await assertDocumentAccess(raw, userId, 'write');
 
   await prisma.recipient.deleteMany({ where: { documentId } });
 
@@ -30,10 +28,8 @@ export async function addRecipients(
 }
 
 export async function getRecipients(documentId: string, userId: string) {
-  const doc = await prisma.document.findUnique({ where: { id: documentId } });
-  if (!doc || doc.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const raw = await prisma.document.findUnique({ where: { id: documentId } });
+  await assertDocumentAccess(raw, userId, 'read');
   return prisma.recipient.findMany({ where: { documentId }, orderBy: { createdAt: 'asc' } });
 }
 

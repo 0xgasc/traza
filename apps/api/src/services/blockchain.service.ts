@@ -2,6 +2,7 @@ import { prisma } from '@traza/database';
 import { createBlockchainClient } from '@traza/crypto';
 import { getEnv } from '../config/env.js';
 import { AppError } from '../middleware/error.middleware.js';
+import { assertDocumentAccess } from '../utils/orgAccess.js';
 
 function getClient() {
   const env = getEnv();
@@ -16,11 +17,8 @@ function getClient() {
 }
 
 export async function anchorDocument(documentId: string, userId: string) {
-  const document = await prisma.document.findUnique({ where: { id: documentId } });
-
-  if (!document || document.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const raw = await prisma.document.findUnique({ where: { id: documentId } });
+  const document = await assertDocumentAccess(raw, userId, 'write');
 
   if (document.blockchainTxHash) {
     throw new AppError(409, 'ALREADY_ANCHORED', 'Document is already anchored on blockchain');
@@ -50,11 +48,8 @@ export async function anchorDocument(documentId: string, userId: string) {
 }
 
 export async function verifyOnChain(documentId: string, userId: string) {
-  const document = await prisma.document.findUnique({ where: { id: documentId } });
-
-  if (!document || document.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const raw = await prisma.document.findUnique({ where: { id: documentId } });
+  const document = await assertDocumentAccess(raw, userId, 'read');
 
   if (!document.blockchainTxHash) {
     return { anchored: false, txHash: null, timestamp: null };

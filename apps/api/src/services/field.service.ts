@@ -1,6 +1,7 @@
 import { prisma, FieldType } from '@traza/database';
 import { AppError } from '../middleware/error.middleware.js';
 import { verifySigningToken } from '../utils/signingToken.js';
+import { assertDocumentAccess } from '../utils/orgAccess.js';
 
 interface FieldInput {
   fieldType: FieldType;
@@ -18,11 +19,8 @@ interface FieldInput {
 }
 
 export async function getDocumentFields(documentId: string, userId: string) {
-  const document = await prisma.document.findUnique({ where: { id: documentId } });
-
-  if (!document || document.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const raw = await prisma.document.findUnique({ where: { id: documentId } });
+  await assertDocumentAccess(raw, userId, 'read');
 
   const fields = await prisma.documentField.findMany({
     where: { documentId },
@@ -45,11 +43,8 @@ export async function saveDocumentFields(
   userId: string,
   fields: FieldInput[],
 ) {
-  const document = await prisma.document.findUnique({ where: { id: documentId } });
-
-  if (!document || document.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const raw = await prisma.document.findUnique({ where: { id: documentId } });
+  const document = await assertDocumentAccess(raw, userId, 'write');
 
   if (document.status !== 'DRAFT' && document.status !== 'PENDING') {
     throw new AppError(

@@ -7,6 +7,7 @@ import { sendSignatureRequestEmail, sendDocumentCompletedEmail, sendReminderEmai
 import { dispatchEvent } from './webhookDispatcher.js';
 import { anchorDocumentToArweave } from './arweave.service.js';
 import * as storage from './storage.service.js';
+import { assertDocumentAccess } from '../utils/orgAccess.js';
 
 interface SignerInput {
   email: string;
@@ -31,11 +32,8 @@ export async function sendForSigning({
   expiresInDays = 7,
   emailLocale = 'en',
 }: SendForSigningInput) {
-  const document = await prisma.document.findUnique({ where: { id: documentId } });
-
-  if (!document || document.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const raw = await prisma.document.findUnique({ where: { id: documentId } });
+  const document = await assertDocumentAccess(raw, userId, 'write');
 
   if (document.status !== 'DRAFT') {
     throw new AppError(400, 'INVALID_STATUS', 'Document must be in DRAFT status to send for signing');
@@ -163,16 +161,14 @@ export async function sendForSigning({
 }
 
 export async function remindPendingSigners(documentId: string, userId: string) {
-  const document = await prisma.document.findUnique({
+  const raw = await prisma.document.findUnique({
     where: { id: documentId },
     include: {
       owner: { select: { name: true } },
     },
   });
 
-  if (!document || document.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const document = await assertDocumentAccess(raw, userId, 'write');
 
   if (document.status !== 'PENDING') {
     throw new AppError(400, 'INVALID_STATUS', 'Reminders can only be sent for PENDING documents');
@@ -658,14 +654,12 @@ export async function declineSignature(
 const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function remindSigner(documentId: string, signatureId: string, userId: string) {
-  const document = await prisma.document.findUnique({
+  const raw = await prisma.document.findUnique({
     where: { id: documentId },
     include: { owner: { select: { name: true } } },
   });
 
-  if (!document || document.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const document = await assertDocumentAccess(raw, userId, 'write');
 
   if (document.status !== 'PENDING') {
     throw new AppError(400, 'INVALID_STATUS', 'Can only remind signers on pending documents');
@@ -720,11 +714,8 @@ export async function remindSigner(documentId: string, signatureId: string, user
 }
 
 export async function getDocumentSignatures(documentId: string, userId: string) {
-  const document = await prisma.document.findUnique({ where: { id: documentId } });
-
-  if (!document || document.ownerId !== userId) {
-    throw new AppError(404, 'NOT_FOUND', 'Document not found');
-  }
+  const raw = await prisma.document.findUnique({ where: { id: documentId } });
+  await assertDocumentAccess(raw, userId, 'read');
 
   const signatures = await prisma.signature.findMany({
     where: { documentId },

@@ -6,14 +6,12 @@ import * as storage from '../services/storage.service.js';
 import { getEnv } from '../config/env.js';
 import { success } from '../utils/response.js';
 import { AppError } from '../middleware/error.middleware.js';
+import { assertDocumentAccess } from '../utils/orgAccess.js';
 
 export async function verifyDocument(req: Request, res: Response, next: NextFunction) {
   try {
-    const document = await prisma.document.findUnique({ where: { id: req.params.id as string } });
-
-    if (!document || document.ownerId !== req.user!.userId) {
-      throw new AppError(404, 'NOT_FOUND', 'Document not found');
-    }
+    const raw = await prisma.document.findUnique({ where: { id: req.params.id as string } });
+    const document = await assertDocumentAccess(raw, req.user!.userId, 'read');
 
     // Re-download and re-hash to verify integrity
     // In production, this would fetch from S3 and compare
@@ -106,7 +104,7 @@ export async function anchorDocument(req: Request, res: Response, next: NextFunc
 
 export async function generateProof(req: Request, res: Response, next: NextFunction) {
   try {
-    const document = await prisma.document.findUnique({
+    const raw = await prisma.document.findUnique({
       where: { id: req.params.id as string },
       include: {
         signatures: {
@@ -115,9 +113,7 @@ export async function generateProof(req: Request, res: Response, next: NextFunct
       },
     });
 
-    if (!document || document.ownerId !== req.user!.userId) {
-      throw new AppError(404, 'NOT_FOUND', 'Document not found');
-    }
+    const document = await assertDocumentAccess(raw, req.user!.userId, 'read');
 
     const env = getEnv();
 
@@ -153,7 +149,7 @@ export async function generateProof(req: Request, res: Response, next: NextFunct
 
 export async function getCertificate(req: Request, res: Response, next: NextFunction) {
   try {
-    const document = await prisma.document.findUnique({
+    const raw = await prisma.document.findUnique({
       where: { id: req.params.id as string },
       include: {
         owner: { select: { email: true, name: true } },
@@ -167,9 +163,7 @@ export async function getCertificate(req: Request, res: Response, next: NextFunc
       },
     });
 
-    if (!document || document.ownerId !== req.user!.userId) {
-      throw new AppError(404, 'NOT_FOUND', 'Document not found');
-    }
+    const document = await assertDocumentAccess(raw, req.user!.userId, 'read');
 
     const signerRows = document.signatures
       .map((s) => {
