@@ -1,6 +1,6 @@
-# Traza - E-Signature Platform
+# Traza — Signing & Document Verification Infrastructure for LATAM
 
-Neo-brutalist e-signature platform with cryptographic verification, multi-tenancy, and blockchain anchoring.
+API-first e-signature (**Traza Sign**) and document verification (**Traza Verify**) platform: cryptographic proof on every document, org multi-tenancy, webhooks, and optional blockchain anchoring. Built for startups embedding signing and validation into their own products.
 
 ## Live Deployment
 
@@ -16,11 +16,7 @@ Hosted on [Railway](https://railway.com) with PostgreSQL.
 
 ### Seeded Test Accounts
 
-| Role | Email | Password |
-|------|-------|----------|
-| Super Admin | `superadmin@traza.dev` | `SuperAdmin2024!` |
-| Admin | `admin@traza.dev` | `Traza2024!` |
-| Signer | `signer@traza.dev` | `Traza2024!` |
+Local development accounts are created by the seed script — see `packages/database/prisma/seed.ts` for emails and how to set passwords. Do not reuse seed credentials in deployed environments.
 
 ## Tech Stack
 
