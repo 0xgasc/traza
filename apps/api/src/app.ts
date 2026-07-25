@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import swaggerUi from 'swagger-ui-express';
-import { generalLimiter } from './middleware/rateLimit.middleware.js';
+import { generalLimiter, verifyHashLimiter } from './middleware/rateLimit.middleware.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { requireAuth } from './middleware/auth.middleware.js';
 import { swaggerSpec } from './config/swagger.js';
@@ -191,6 +191,10 @@ app.get('/api/v1/documents/:id/certificate', requireAuth, extraController.getCer
 // signature link in the signed PDF) can confirm the doc, signers, hash,
 // and blockchain anchor. No auth.
 app.get('/api/v1/verify/:id', extraController.publicVerifyDocument);
+
+// Public verify-by-hash — anyone holding a PDF can hash it client-side and
+// check whether it exists in Traza. Minimal response, strictly rate-limited.
+app.get('/api/v1/verify/hash/:hash', verifyHashLimiter, extraController.publicVerifyByHash);
 
 // Dashboard
 app.get('/api/v1/dashboard/stats', requireAuth, extraController.getDashboardStats);

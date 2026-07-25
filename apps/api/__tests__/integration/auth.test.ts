@@ -63,9 +63,10 @@ describe('Auth Endpoints', () => {
 
   describe('POST /api/v1/auth/refresh', () => {
     it('should reject refresh without cookie', async () => {
+      // Missing token fails request validation (400), not authentication (401)
       const response = await request(app)
         .post('/api/v1/auth/refresh')
-        .expect(401);
+        .expect(400);
 
       expect(response.body.error).toBeDefined();
     });

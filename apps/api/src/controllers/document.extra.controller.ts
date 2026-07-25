@@ -93,6 +93,60 @@ export async function publicVerifyDocument(req: Request, res: Response, next: Ne
   }
 }
 
+// Public verify-by-hash — no auth. The response is deliberately minimal:
+// a bare hash must never be pivotable to signer PII, the document title,
+// or the document ID (which would unlock the richer /verify/:id record).
+export async function publicVerifyByHash(req: Request, res: Response, next: NextFunction) {
+  try {
+    const hash = (req.params.hash as string).trim().toLowerCase().replace(/^sha256:/, '');
+    if (!/^[a-f0-9]{64}$/.test(hash)) {
+      throw new AppError(400, 'INVALID_HASH', 'Expected a SHA-256 hex digest (64 hex chars)');
+    }
+
+    const matches = await prisma.document.findMany({
+      where: { fileHash: hash, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: {
+        status: true,
+        createdAt: true,
+        blockchainTxHash: true,
+        signatures: {
+          where: { status: 'SIGNED' },
+          select: { signedAt: true },
+        },
+      },
+    });
+
+    if (matches.length === 0) {
+      success(res, { found: false });
+      return;
+    }
+
+    const doc = matches[0]!;
+    const completedAt =
+      doc.status === 'SIGNED'
+        ? doc.signatures.reduce<Date | null>(
+            (latest, s) => (s.signedAt && (!latest || s.signedAt > latest) ? s.signedAt : latest),
+            null,
+          )
+        : null;
+
+    success(res, {
+      found: true,
+      matches: matches.length,
+      status: doc.status,
+      hashAlgorithm: 'SHA-256',
+      createdAt: doc.createdAt,
+      completedAt,
+      signerCount: doc.signatures.length,
+      anchored: Boolean(doc.blockchainTxHash),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function anchorDocument(req: Request, res: Response, next: NextFunction) {
   try {
     const result = await blockchainService.anchorDocument(req.params.id as string, req.user!.userId);

@@ -12,12 +12,16 @@ const config: Config = {
       'ts-jest',
       {
         useESM: true,
-        tsconfig: 'tsconfig.json',
+        // tsconfig.base uses NodeNext, which emits CJS here (api package.json
+        // has no "type": "module") — force ESM emit to match the ESM preset
+        tsconfig: {
+          module: 'ESNext',
+          moduleResolution: 'Bundler',
+        },
       },
     ],
   },
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
-  setupFilesAfterSetup: [],
   testMatch: ['**/__tests__/**/*.test.ts'],
   collectCoverageFrom: [
     'src/**/*.ts',

@@ -53,6 +53,21 @@ export const accessCodeLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Strict limiter for public verify-by-hash — hash lookups must not be
+// usable to probe the corpus at scale
+export const verifyHashLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: {
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many verification requests, please try again later',
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Rate limiter for public signing endpoints — prevents enumeration and abuse
 export const signingLimiter = rateLimit({
   windowMs: 60 * 1000,
