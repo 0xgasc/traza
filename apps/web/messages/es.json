@@ -435,7 +435,11 @@
     "emailLanguageHint": "Idioma para las notificaciones por correo enviadas a los firmantes",
     "sendButtonSeq": " (secuencial)",
     "sending": "Enviando...",
-    "validationError": "Se requiere al menos un firmante con nombre y correo."
+    "validationError": "Se requiere al menos un firmante con nombre y correo.",
+    "phonePlaceholder": "WhatsApp +502…",
+    "verifyNone": "Sin verificación extra",
+    "verifyEmailOtp": "Verificar: código por correo",
+    "verifyWhatsappOtp": "Verificar: código por WhatsApp"
   },
   "templates": {
     "title": "Plantillas",
@@ -1016,7 +1020,18 @@
     },
     "signatureLabel": "Tu Firma",
     "yourSignature": "SOLICITUD DE FIRMA ELECTRÓNICA",
-    "signerLabel": "Firmante"
+    "signerLabel": "Firmante",
+    "otp": {
+      "title": "Verificación de identidad requerida",
+      "descEmail": "Antes de firmar, te enviaremos un código de 6 dígitos a tu correo para confirmar que eres tú.",
+      "descWhatsapp": "Antes de firmar, te enviaremos un código de 6 dígitos a tu WhatsApp para confirmar que eres tú.",
+      "sendEmail": "Enviar código por correo",
+      "sendWhatsapp": "Enviar código por WhatsApp",
+      "sending": "Enviando…",
+      "placeholder": "Código de 6 dígitos",
+      "verify": "Verificar",
+      "resend": "Reenviar código"
+    }
   },
   "signerAuth": {
     "brand": "Traza",

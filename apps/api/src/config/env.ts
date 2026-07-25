@@ -25,6 +25,10 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().default('sign@traza.dev'),
   SENTRY_DSN: z.string().optional(),
   LOG_LEVEL: z.string().default('debug'),
+  // WhatsApp delivery — 'stub' logs instead of sending (no credentials needed)
+  WHATSAPP_PROVIDER: z.enum(['stub', 'meta']).default('stub'),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

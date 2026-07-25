@@ -8,7 +8,7 @@ const STEP_UPLOAD = `curl -X POST ${API_URL}/api/v1/documents \\
   -F "file=@contrato.pdf" \\
   -F "title=Contrato de arrendamiento"
 
-# → { "data": { "id": "d290f1ee-...", "fileHash": "e3b0c442...", "status": "DRAFT" } }`;
+# → { "id": "d290f1ee-...", "fileHash": "e3b0c442...", "status": "DRAFT" }`;
 
 const STEP_SEND = `curl -X POST ${API_URL}/api/v1/documents/$DOC_ID/send \\
   -H "X-API-Key: $TRAZA_API_KEY" \\
@@ -38,7 +38,7 @@ const STEP_VERIFY = `# Anyone can verify — no auth. Hash any PDF locally:
 HASH=$(shasum -a 256 contrato-firmado.pdf | cut -d' ' -f1)
 curl ${API_URL}/api/v1/verify/hash/$HASH
 
-# → { "data": { "found": true, "status": "SIGNED", "signerCount": 2, "anchored": true } }`;
+# → { "found": true, "status": "SIGNED", "signerCount": 2, "anchored": true }`;
 
 const COPY = {
   en: {

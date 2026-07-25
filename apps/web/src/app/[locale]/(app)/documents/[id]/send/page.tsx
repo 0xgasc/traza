@@ -12,6 +12,8 @@ interface Signer {
   order: number;
   fieldCount?: number;
   accessCode?: string;
+  phone?: string;
+  verificationLevel?: "NONE" | "EMAIL_OTP" | "WHATSAPP_OTP";
 }
 
 interface FieldData {
@@ -138,6 +140,10 @@ export default function SendForSigningPage() {
           name: s.name.trim(),
           order: sequential ? s.order : 1,
           accessCode: s.accessCode?.trim() || undefined,
+          phone: s.phone?.trim() || undefined,
+          // Phone present → also deliver the signing link via WhatsApp
+          deliveryChannel: s.phone?.trim() ? "BOTH" : "EMAIL",
+          verificationLevel: s.verificationLevel ?? "NONE",
         })),
         message: message.trim() || undefined,
         expiresInDays: parseInt(expiresInDays, 10),
@@ -279,6 +285,23 @@ export default function SendForSigningPage() {
                     className="input w-full sm:w-24 flex-shrink-0"
                     maxLength={16}
                   />
+                  <input
+                    type="tel"
+                    value={signer.phone ?? ""}
+                    onChange={(e) => updateSigner(originalIndex, "phone", e.target.value)}
+                    placeholder={t("phonePlaceholder")}
+                    className="input w-full sm:w-36 flex-shrink-0"
+                    maxLength={16}
+                  />
+                  <select
+                    value={signer.verificationLevel ?? "NONE"}
+                    onChange={(e) => updateSigner(originalIndex, "verificationLevel", e.target.value)}
+                    className="input w-full sm:w-40 flex-shrink-0"
+                  >
+                    <option value="NONE">{t("verifyNone")}</option>
+                    <option value="EMAIL_OTP">{t("verifyEmailOtp")}</option>
+                    <option value="WHATSAPP_OTP">{t("verifyWhatsappOtp")}</option>
+                  </select>
                   {signer.fieldCount ? (
                     <span className="text-xs font-bold text-stone-400 uppercase w-8 text-center flex-shrink-0">
                       {signer.fieldCount}f

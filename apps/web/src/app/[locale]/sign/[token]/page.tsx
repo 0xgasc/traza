@@ -34,6 +34,8 @@ interface SigningContext {
   status: string;
   waitingForPreviousSigners?: boolean;
   requiresAccessCode?: boolean;
+  verificationLevel?: "NONE" | "EMAIL_OTP" | "WHATSAPP_OTP";
+  otpVerified?: boolean;
 }
 
 interface ApiFieldPosition {
@@ -124,6 +126,11 @@ export default function PublicSigningPage() {
   const [accessCodeInput, setAccessCodeInput] = useState("");
   const [accessCodeError, setAccessCodeError] = useState("");
   const [accessCodeVerified, setAccessCodeVerified] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpInput, setOtpInput] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [otpVerified, setOtpVerified] = useState(false);
 
   // Branding
   const [branding, setBranding] = useState<{ logoUrl: string | null; primaryColor: string | null }>({ logoUrl: null, primaryColor: null });
@@ -340,6 +347,44 @@ export default function PublicSigningPage() {
     }
   };
 
+  const handleRequestOtp = async () => {
+    setOtpError("");
+    setOtpSending(true);
+    try {
+      const res = await fetch(API_BASE + "/api/v1/sign/" + token + "/otp/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error?.message || "Could not send the code.");
+      }
+      setOtpSent(true);
+    } catch (err: unknown) {
+      setOtpError(err instanceof Error ? err.message : "Could not send the code.");
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setOtpError("");
+    try {
+      const res = await fetch(API_BASE + "/api/v1/sign/" + token + "/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: otpInput.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error?.message || "Incorrect code.");
+      }
+      setOtpVerified(true);
+    } catch (err: unknown) {
+      setOtpError(err instanceof Error ? err.message : "Incorrect code.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
@@ -477,6 +522,70 @@ export default function PublicSigningPage() {
               {t("pinRequired.submit")}
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // OTP identity-verification gate (also enforced server-side on submit)
+  if (
+    context?.verificationLevel &&
+    context.verificationLevel !== "NONE" &&
+    !context.otpVerified &&
+    !otpVerified
+  ) {
+    const viaWhatsApp = context.verificationLevel === "WHATSAPP_OTP";
+    return (
+      <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
+        <div className="card max-w-sm w-full shadow-brutal">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold tracking-tighter uppercase">{t("brand")}</h1>
+            <p className="text-xs text-stone-500 font-mono mt-1">{t("otp.title")}</p>
+          </div>
+          <div className="mb-6">
+            <p className="text-sm font-semibold mb-1">{context.documentTitle}</p>
+            <p className="text-sm text-stone-500">
+              {viaWhatsApp ? t("otp.descWhatsapp") : t("otp.descEmail")}
+            </p>
+          </div>
+          {otpError && (
+            <div className="mb-4 p-3 border-4 border-black bg-stone-100">
+              <p className="text-xs font-semibold">{otpError}</p>
+            </div>
+          )}
+          {!otpSent ? (
+            <button onClick={handleRequestOtp} disabled={otpSending} className="btn w-full">
+              {otpSending ? t("otp.sending") : viaWhatsApp ? t("otp.sendWhatsapp") : t("otp.sendEmail")}
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={otpInput}
+                onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder={t("otp.placeholder")}
+                className="input w-full text-center font-mono tracking-widest text-lg"
+                maxLength={6}
+                onKeyDown={(e) => e.key === "Enter" && otpInput.length === 6 && handleVerifyOtp()}
+              />
+              <button
+                onClick={handleVerifyOtp}
+                disabled={otpInput.length !== 6}
+                className="btn w-full"
+              >
+                {t("otp.verify")}
+              </button>
+              <button
+                onClick={handleRequestOtp}
+                disabled={otpSending}
+                className="w-full text-xs text-stone-500 underline"
+                type="button"
+              >
+                {t("otp.resend")}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );

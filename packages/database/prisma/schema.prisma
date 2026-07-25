@@ -32,6 +32,18 @@ enum SignatureType {
   PKI
 }
 
+enum DeliveryChannel {
+  EMAIL
+  WHATSAPP
+  BOTH
+}
+
+enum VerificationLevel {
+  NONE
+  EMAIL_OTP
+  WHATSAPP_OTP
+}
+
 enum SignatureStatus {
   PENDING
   SIGNED
@@ -266,6 +278,15 @@ model Signature {
   delegatedToName         String?
   delegatedAt             DateTime?
   signerUserId            String?   // Links to signer account if they have one
+  // WhatsApp delivery (optional, E.164 phone)
+  signerPhone             String?
+  deliveryChannel         DeliveryChannel @default(EMAIL)
+  // OTP identity verification at signature
+  verificationLevel       VerificationLevel @default(NONE)
+  otpHash                 String?
+  otpExpiresAt            DateTime?
+  otpVerifiedAt           DateTime?
+  otpAttempts             Int             @default(0)
   createdAt               DateTime        @default(now())
 
   document    Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)

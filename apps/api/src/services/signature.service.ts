@@ -1,10 +1,12 @@
+import { createHash } from 'node:crypto';
 import { prisma } from '@traza/database';
 import { AppError } from '../middleware/error.middleware.js';
 import { generateSigningToken, verifySigningToken } from '../utils/signingToken.js';
 import { getEnv } from '../config/env.js';
 import { logger } from '../config/logger.js';
-import { sendSignatureRequestEmail, sendDocumentCompletedEmail, sendReminderEmail, sendSignatureDeclinedEmail } from './email.service.js';
+import { sendSignatureRequestEmail, sendDocumentCompletedEmail, sendReminderEmail, sendSignatureDeclinedEmail, sendOtpEmail } from './email.service.js';
 import { dispatchEvent } from './webhookDispatcher.js';
+import { sendSigningLinkWhatsApp, sendOtpWhatsApp } from './whatsapp.service.js';
 import { anchorDocumentToArweave } from './arweave.service.js';
 import * as storage from './storage.service.js';
 import { assertDocumentAccess } from '../utils/orgAccess.js';
@@ -13,6 +15,10 @@ interface SignerInput {
   email: string;
   name: string;
   order?: number;
+  accessCode?: string;
+  phone?: string;
+  deliveryChannel?: 'EMAIL' | 'WHATSAPP' | 'BOTH';
+  verificationLevel?: 'NONE' | 'EMAIL_OTP' | 'WHATSAPP_OTP';
 }
 
 interface SendForSigningInput {
@@ -60,6 +66,10 @@ export async function sendForSigning({
           token: tempToken, // Temporary unique token
           tokenExpiresAt: expiresAt,
           status: 'PENDING',
+          accessCode: signer.accessCode ?? null,
+          signerPhone: signer.phone ?? null,
+          deliveryChannel: signer.deliveryChannel ?? 'EMAIL',
+          verificationLevel: signer.verificationLevel ?? 'NONE',
         },
       });
 
@@ -84,7 +94,9 @@ export async function sendForSigning({
         order,
         signerEmail: signer.email,
         signerName: signer.name,
-        signingUrl: `${env.APP_URL}/en/sign/${token}`,
+        signerPhone: signer.phone,
+        deliveryChannel: signer.deliveryChannel ?? 'EMAIL',
+        signingUrl: `${env.APP_URL}/${emailLocale === 'es' ? 'es' : 'en'}/sign/${token}`,
       };
     }),
   );
@@ -140,21 +152,37 @@ export async function sendForSigning({
   const minOrder = Math.min(...signatureRecords.map((r) => r.order));
 
   for (const record of signatureRecords) {
-    // Only email first-order signers now; others will be emailed when it's their turn
+    // Only notify first-order signers now; others will be notified when it's their turn
     if (hasMultipleOrders && record.order !== minOrder) continue;
 
-    sendSignatureRequestEmail({
-      to: record.signerEmail,
-      recipientName: record.signerName,
-      senderName,
-      documentTitle: document.title,
-      signingUrl: record.signingUrl,
-      expiresAt,
-      message, // Include custom message from sender
-      locale: emailLocale, // Use document's email language
-    }).catch((err) => {
-      logger.error(`[email] Failed to send signature request to ${record.signerEmail}:`, err);
-    });
+    // Email goes out unless the signer opted for WhatsApp-only delivery
+    if (record.deliveryChannel !== 'WHATSAPP') {
+      sendSignatureRequestEmail({
+        to: record.signerEmail,
+        recipientName: record.signerName,
+        senderName,
+        documentTitle: document.title,
+        signingUrl: record.signingUrl,
+        expiresAt,
+        message, // Include custom message from sender
+        locale: emailLocale, // Use document's email language
+      }).catch((err) => {
+        logger.error(`[email] Failed to send signature request to ${record.signerEmail}:`, err);
+      });
+    }
+
+    if (record.signerPhone && record.deliveryChannel !== 'EMAIL') {
+      sendSigningLinkWhatsApp({
+        phone: record.signerPhone,
+        signerName: record.signerName,
+        senderName,
+        documentTitle: document.title,
+        signingUrl: record.signingUrl,
+        locale: emailLocale,
+      }).catch((err) => {
+        logger.error(`[whatsapp] Failed to send signing link to ${record.signerPhone}:`, err);
+      });
+    }
   }
 
   return { signatures: signatureRecords };
@@ -301,6 +329,9 @@ export async function getSigningContext(token: string) {
     signerName: signature.signerName,
     status: signature.status,
     waitingForPreviousSigners,
+    requiresAccessCode: Boolean(signature.accessCode) && !signature.accessCodeVerifiedAt,
+    verificationLevel: signature.verificationLevel,
+    otpVerified: Boolean(signature.otpVerifiedAt),
   };
 }
 
@@ -328,6 +359,15 @@ export async function submitSignature(
 
   if (signature.tokenExpiresAt < new Date()) {
     throw new AppError(410, 'EXPIRED', 'This signing link has expired');
+  }
+
+  // Access-code and OTP gates — enforced server-side; the client-side
+  // steps alone are not a security boundary
+  if (signature.accessCode && !signature.accessCodeVerifiedAt) {
+    throw new AppError(403, 'ACCESS_CODE_REQUIRED', 'Access code verification is required before signing');
+  }
+  if (signature.verificationLevel !== 'NONE' && !signature.otpVerifiedAt) {
+    throw new AppError(403, 'OTP_REQUIRED', 'Identity verification is required before signing');
   }
 
   // Enforce signing order: block if previous signers haven't signed yet
@@ -881,6 +921,136 @@ export async function verifyAccessCode(token: string, code: string) {
   await prisma.signature.update({
     where: { id: signature.id },
     data: { accessCodeVerifiedAt: new Date() },
+  });
+
+  return { verified: true };
+}
+
+// ---------------------------------------------------------------------------
+// OTP identity verification at signature (verificationLevel EMAIL_OTP /
+// WHATSAPP_OTP). Codes are 6 digits, hashed at rest, 10-minute expiry,
+// 5 attempts max. submitSignature refuses until otpVerifiedAt is set.
+// ---------------------------------------------------------------------------
+
+const OTP_TTL_MINUTES = 10;
+const OTP_MAX_ATTEMPTS = 5;
+
+function hashOtp(code: string, signatureId: string): string {
+  return createHash('sha256').update(`${signatureId}:${code}`).digest('hex');
+}
+
+export async function requestSigningOtp(token: string) {
+  const signature = await prisma.signature.findUnique({
+    where: { token },
+    include: { document: { select: { emailLocale: true, title: true } } },
+  });
+
+  if (!signature) {
+    throw new AppError(404, 'NOT_FOUND', 'Signature request not found');
+  }
+  if (signature.verificationLevel === 'NONE') {
+    throw new AppError(400, 'NO_OTP_REQUIRED', 'This signature does not require OTP verification');
+  }
+  if (signature.status !== 'PENDING') {
+    throw new AppError(400, 'INVALID_STATUS', 'This signature is no longer pending');
+  }
+  if (signature.tokenExpiresAt < new Date()) {
+    throw new AppError(410, 'EXPIRED', 'This signing link has expired');
+  }
+
+  const crypto = await import('crypto');
+  const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
+  const locale = signature.document.emailLocale ?? 'en';
+
+  await prisma.signature.update({
+    where: { id: signature.id },
+    data: {
+      otpHash: hashOtp(code, signature.id),
+      otpExpiresAt: new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000),
+      otpAttempts: 0,
+      otpVerifiedAt: null,
+    },
+  });
+
+  const channel = signature.verificationLevel === 'WHATSAPP_OTP' ? 'whatsapp' : 'email';
+  if (channel === 'whatsapp') {
+    if (!signature.signerPhone) {
+      throw new AppError(400, 'NO_PHONE', 'No phone number on file for WhatsApp verification');
+    }
+    await sendOtpWhatsApp({ phone: signature.signerPhone, code, locale });
+  } else {
+    await sendOtpEmail({
+      to: signature.signerEmail,
+      recipientName: signature.signerName,
+      code,
+      documentTitle: signature.document.title,
+      locale,
+      expiresInMinutes: OTP_TTL_MINUTES,
+    });
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      documentId: signature.documentId,
+      eventType: 'signature.otp_requested',
+      metadata: { signerEmail: signature.signerEmail, channel },
+    },
+  });
+
+  return { sent: true, channel, expiresInMinutes: OTP_TTL_MINUTES };
+}
+
+export async function verifySigningOtp(token: string, code: string) {
+  const signature = await prisma.signature.findUnique({ where: { token } });
+
+  if (!signature) {
+    throw new AppError(404, 'NOT_FOUND', 'Signature request not found');
+  }
+  if (signature.verificationLevel === 'NONE') {
+    throw new AppError(400, 'NO_OTP_REQUIRED', 'This signature does not require OTP verification');
+  }
+  if (!signature.otpHash || !signature.otpExpiresAt) {
+    throw new AppError(400, 'OTP_NOT_REQUESTED', 'Request a verification code first');
+  }
+  if (signature.otpExpiresAt < new Date()) {
+    throw new AppError(410, 'OTP_EXPIRED', 'The verification code expired — request a new one');
+  }
+  if (signature.otpAttempts >= OTP_MAX_ATTEMPTS) {
+    throw new AppError(429, 'OTP_LOCKED', 'Too many attempts — request a new code');
+  }
+  if (!code || !/^\d{6}$/.test(code.trim())) {
+    throw new AppError(400, 'CODE_REQUIRED', 'A 6-digit code is required');
+  }
+
+  // Count the attempt before comparing so failures can't be retried freely
+  await prisma.signature.update({
+    where: { id: signature.id },
+    data: { otpAttempts: { increment: 1 } },
+  });
+
+  const crypto = await import('crypto');
+  const expected = Buffer.from(signature.otpHash, 'hex');
+  const received = Buffer.from(hashOtp(code.trim(), signature.id), 'hex');
+  const isValid = expected.length === received.length && crypto.timingSafeEqual(expected, received);
+
+  if (!isValid) {
+    throw new AppError(403, 'INVALID_CODE', 'Incorrect verification code');
+  }
+
+  await prisma.signature.update({
+    where: { id: signature.id },
+    data: { otpVerifiedAt: new Date() },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      documentId: signature.documentId,
+      eventType: 'signature.otp_verified',
+      metadata: {
+        signerEmail: signature.signerEmail,
+        channel: signature.verificationLevel === 'WHATSAPP_OTP' ? 'whatsapp' : 'email',
+      },
+    },
   });
 
   return { verified: true };

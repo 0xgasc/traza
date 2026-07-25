@@ -112,6 +112,23 @@ router.post(
   signatureController.declineSignature,
 );
 
+// OTP identity verification (verificationLevel EMAIL_OTP / WHATSAPP_OTP)
+router.post('/sign/:token/otp/request', accessCodeLimiter, async (req, res, next) => {
+  try {
+    const { requestSigningOtp } = await import('../services/signature.service.js');
+    const result = await requestSigningOtp(req.params.token as string);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.post('/sign/:token/otp/verify', accessCodeLimiter, async (req, res, next) => {
+  try {
+    const { verifySigningOtp } = await import('../services/signature.service.js');
+    const result = await verifySigningOtp(req.params.token as string, req.body.code ?? '');
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
 router.post('/sign/:token/access', accessCodeLimiter, async (req, res, next) => {
   try {
     const { verifyAccessCode } = await import('../services/signature.service.js');

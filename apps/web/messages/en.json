@@ -435,7 +435,11 @@
     "emailLanguageHint": "Language for email notifications sent to signers",
     "sendButtonSeq": " (sequential)",
     "sending": "Sending...",
-    "validationError": "At least one signer with name and email is required."
+    "validationError": "At least one signer with name and email is required.",
+    "phonePlaceholder": "WhatsApp +502…",
+    "verifyNone": "No extra verification",
+    "verifyEmailOtp": "Verify: email code",
+    "verifyWhatsappOtp": "Verify: WhatsApp code"
   },
   "templates": {
     "title": "Templates",
@@ -1016,7 +1020,18 @@
     },
     "signatureLabel": "Your Signature",
     "yourSignature": "E-SIGNATURE REQUEST",
-    "signerLabel": "Signer"
+    "signerLabel": "Signer",
+    "otp": {
+      "title": "Identity verification required",
+      "descEmail": "Before signing, we'll send a 6-digit code to your email to confirm it's you.",
+      "descWhatsapp": "Before signing, we'll send a 6-digit code to your WhatsApp to confirm it's you.",
+      "sendEmail": "Send code by email",
+      "sendWhatsapp": "Send code by WhatsApp",
+      "sending": "Sending…",
+      "placeholder": "6-digit code",
+      "verify": "Verify",
+      "resend": "Resend code"
+    }
   },
   "signerAuth": {
     "brand": "Traza",

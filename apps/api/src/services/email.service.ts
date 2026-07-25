@@ -247,6 +247,44 @@ export async function sendOrgInvitationEmail(params: {
   );
 }
 
+export async function sendOtpEmail(params: {
+  to: string;
+  recipientName: string;
+  code: string;
+  documentTitle: string;
+  locale?: string;
+  expiresInMinutes?: number;
+}) {
+  const locale = params.locale === 'es' ? 'es' : 'en';
+  const minutes = params.expiresInMinutes ?? 10;
+
+  const subject =
+    locale === 'es'
+      ? `${params.code} es tu código de verificación Traza`
+      : `${params.code} is your Traza verification code`;
+
+  const intro =
+    locale === 'es'
+      ? `Hola ${params.recipientName}, usa este código para verificar tu identidad antes de firmar "${params.documentTitle}":`
+      : `Hi ${params.recipientName}, use this code to verify your identity before signing "${params.documentTitle}":`;
+
+  const expiry =
+    locale === 'es'
+      ? `Expira en ${minutes} minutos. Si no solicitaste este código, ignora este correo.`
+      : `It expires in ${minutes} minutes. If you didn't request this code, ignore this email.`;
+
+  const html = `
+    <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+      <p style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px; text-transform: uppercase;">traza</p>
+      <p style="font-size: 15px; color: #444;">${intro}</p>
+      <p style="font-size: 36px; font-weight: 700; letter-spacing: 8px; border: 3px solid #000; padding: 16px 24px; text-align: center;">${params.code}</p>
+      <p style="font-size: 13px; color: #777;">${expiry}</p>
+    </div>
+  `;
+
+  await sendEmail(params.to, subject, html);
+}
+
 export async function sendPasswordResetEmail(params: {
   to: string;
   recipientName: string;
