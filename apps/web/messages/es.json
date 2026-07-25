@@ -1,69 +1,183 @@
 {
   "nav": {
     "signIn": "Iniciar Sesión",
-    "startFree": "Empieza Gratis"
+    "startFree": "Empieza Gratis",
+    "developers": "Desarrolladores"
   },
   "landing": {
     "hero": {
-      "title": "Contratos, firmados con prueba.",
-      "subtitle": "Una plataforma moderna de firma electrónica con verificación criptográfica, seguridad de nivel empresarial y precios que tienen sentido.",
+      "title": "La API de firma y verificación para startups de LATAM.",
+      "subtitle": "Integra firma electrónica con solidez legal en tu producto en una tarde — y dale a cualquiera prueba criptográfica de que un documento es real. Hecho en Latinoamérica, con precios para Latinoamérica.",
       "startFree": "Empieza Gratis",
-      "viewApi": "Ver API",
-      "noCreditCard": "Sin tarjeta de crédito. 5 documentos gratis al mes."
+      "quickstart": "Quickstart (5 min)",
+      "noCreditCard": "Sin tarjeta de crédito. 5 documentos gratis al mes.",
+      "codeCaptionSend": "envía un documento a firma",
+      "codeCaptionWebhook": "tu webhook se dispara al firmarse"
+    },
+    "products": {
+      "heading": "Dos productos, un motor de prueba",
+      "sign": {
+        "kicker": "Traza Sign",
+        "title": "Firma electrónica embebida",
+        "desc": "Envía, firma y completa documentos desde tu propio producto o nuestro dashboard. Los firmantes no necesitan cuenta — reciben un enlace seguro y firman desde cualquier teléfono.",
+        "bullets": [
+          "API REST + webhooks con firma HMAC",
+          "Plantillas, envío masivo y equipos",
+          "Verificación OTP del firmante",
+          "Registro de auditoría con IP, fecha y navegador"
+        ],
+        "cta": "Ver la documentación"
+      },
+      "verify": {
+        "kicker": "Traza Verify",
+        "title": "Verificación de documentos",
+        "desc": "Cada documento se hashea con SHA-256 al subirse y opcionalmente se ancla en Polygon. Cualquiera puede validar un documento — sin cuenta, y el archivo nunca sale de su dispositivo.",
+        "bullets": [
+          "Página pública de verificación por documento",
+          "Verifica cualquier PDF por hash, calculado en tu navegador",
+          "Sellos de tiempo anclados en blockchain (opcional)",
+          "Paquete de prueba: hashes, firmantes, eventos de auditoría"
+        ],
+        "cta": "Verificar un documento"
+      }
     },
     "howItWorks": {
       "heading": "Cómo funciona",
-      "step1": { "num": "01", "title": "Sube", "desc": "Sube tu PDF. Lo hasheamos con SHA-256 al instante." },
-      "step2": { "num": "02", "title": "Envía", "desc": "Añade firmantes. Reciben un enlace seguro. Sin cuenta necesaria." },
-      "step3": { "num": "03", "title": "Prueba", "desc": "Descarga el documento firmado con un paquete de prueba criptográfica." }
+      "step1": {
+        "num": "01",
+        "title": "Sube",
+        "desc": "Sube tu PDF — desde el dashboard o con una llamada a la API. Lo hasheamos con SHA-256 al instante."
+      },
+      "step2": {
+        "num": "02",
+        "title": "Envía",
+        "desc": "Añade firmantes. Reciben un enlace seguro. Sin cuenta necesaria."
+      },
+      "step3": {
+        "num": "03",
+        "title": "Prueba",
+        "desc": "Descarga el documento firmado con su paquete de prueba criptográfica — verificable por cualquiera, para siempre."
+      }
+    },
+    "useCases": {
+      "heading": "Para productos que viven de documentos",
+      "subheading": "Si tu startup genera contratos, Traza es tu capa de firma.",
+      "fintech": {
+        "title": "Fintech y crédito",
+        "desc": "Contratos de crédito y pagarés firmados dentro de tu flujo de onboarding, con firmantes verificados por OTP y evidencia completa.",
+        "doc": "contratos de crédito · pagarés"
+      },
+      "proptech": {
+        "title": "Proptech e inmobiliarias",
+        "desc": "Arrendamientos firmados desde el teléfono. Combínalo con tu stack de pagos para cobrar renta y depósito al firmar.",
+        "doc": "arrendamientos · promesas de compraventa"
+      },
+      "hr": {
+        "title": "HR tech",
+        "desc": "Cartas de oferta y contratos laborales a escala, con plantillas y envío masivo.",
+        "doc": "cartas de oferta · contratos laborales"
+      },
+      "marketplace": {
+        "title": "Marketplaces",
+        "desc": "Onboarding de vendedores con aceptación de términos verificable — prueba que vale más que un checkbox.",
+        "doc": "onboarding de vendedores · términos"
+      }
     },
     "features": {
       "heading": "Diferente por diseño",
-      "cryptoProof": { "title": "Prueba Criptográfica", "desc": "Cada documento se hashea con SHA-256 al subirse. Verificación a prueba de manipulación, al instante." },
-      "blockchain": { "title": "Anclado en Blockchain", "desc": "Anclaje opcional en Polygon para prueba inmutable y con sello de tiempo en la cadena." },
-      "apiFirst": { "title": "API Primero", "desc": "API REST limpia con webhooks. Integra la firma en tu producto en minutos." },
-      "auditTrail": { "title": "Registro de Auditoría", "desc": "Cada vista, firma y descarga se registra con IP, marca de tiempo y agente de usuario." },
-      "dx": { "title": "Experiencia de Desarrollador", "desc": "SDK TypeScript, docs OpenAPI y firmas de webhook. Hecho para desarrolladores." },
-      "pricing": { "title": "Precios Transparentes", "desc": "Nivel gratuito incluido. Sin sorpresas por sobre. Escala cuando lo necesites." }
+      "cryptoProof": {
+        "title": "Prueba Criptográfica",
+        "desc": "Cada documento se hashea con SHA-256 al subirse. Verificación a prueba de manipulación, al instante y para siempre."
+      },
+      "blockchain": {
+        "title": "Anclado en Blockchain",
+        "desc": "Anclaje opcional en Polygon para prueba inmutable y con sello de tiempo en la cadena."
+      },
+      "apiFirst": {
+        "title": "API Primero",
+        "desc": "API REST limpia, webhooks firmados con HMAC y SDK TypeScript. Integra la firma en tu producto en minutos."
+      },
+      "auditTrail": {
+        "title": "Registro de Auditoría",
+        "desc": "Cada vista, firma y descarga se registra con IP, marca de tiempo y navegador."
+      },
+      "identity": {
+        "title": "Verificación del Firmante",
+        "desc": "Códigos de un solo uso al firmar, hoy; niveles de identidad verificada (documento + selfie) en el roadmap."
+      },
+      "legal": {
+        "title": "Validez Legal en LATAM",
+        "desc": "Evidencia mapeada a la ley de firma electrónica de Guatemala, México y Colombia — documentado con honestidad, país por país."
+      },
+      "legalNote": "¿Te preguntas si esto es válido legalmente?",
+      "legalLink": "Lee la guía legal país por país"
     },
     "pricing": {
       "heading": "Precios simples",
-      "subheading": "Empieza gratis. Mejora cuando importa.",
+      "subheading": "Gratis para empezar. Por uso cuando escalas.",
       "free": {
         "name": "Gratis",
         "price": "$0",
         "period": "siempre",
-        "features": ["5 documentos / mes", "Firmas por email", "Hasheo SHA-256", "Registro de auditoría básico"],
+        "features": [
+          "5 documentos / mes",
+          "Firmas por email",
+          "Hasheo SHA-256 + página de verificación",
+          "Registro de auditoría básico"
+        ],
         "cta": "Empieza Gratis"
       },
       "starter": {
         "name": "Inicial",
         "price": "$12",
         "period": "/ mes",
-        "features": ["50 documentos / mes", "Marca personalizada", "Acceso API", "Notificaciones webhook", "Soporte prioritario"],
+        "features": [
+          "50 documentos / mes",
+          "Marca personalizada",
+          "Acceso API",
+          "Notificaciones webhook",
+          "Soporte prioritario"
+        ],
         "cta": "Comenzar"
       },
       "pro": {
         "name": "Pro",
         "price": "$39",
         "period": "/ mes",
-        "features": ["Documentos ilimitados", "Anclaje blockchain", "Cuentas de equipo", "Registros de auditoría avanzados", "Eventos webhook personalizados", "Envío masivo"],
+        "features": [
+          "Documentos ilimitados en dashboard",
+          "Anclaje blockchain",
+          "Cuentas de equipo",
+          "Registros de auditoría avanzados",
+          "Envío masivo"
+        ],
         "cta": "Ir a Pro"
       },
-      "enterprise": {
-        "name": "Empresarial",
-        "price": "Personalizado",
-        "features": ["Todo en Pro", "SSO / SAML", "Soporte dedicado", "SLA personalizado", "Opción en local", "Paquetes de cumplimiento"],
-        "cta": "Contáctanos"
-      }
+      "api": {
+        "name": "API",
+        "price": "$0.40",
+        "period": "/ sobre completado",
+        "features": [
+          "Sandbox gratuito ilimitado",
+          "Paga solo por sobres completados",
+          "Verificación OTP incluida",
+          "Webhooks HMAC + SDK TypeScript",
+          "Descuentos por volumen"
+        ],
+        "cta": "Obtener API Keys"
+      },
+      "enterpriseNote": "¿Enterprise? SSO/SAML, soporte dedicado, SLA a medida y opción on-prem — escríbenos."
     },
     "cta": {
       "heading": "¿Listo para firmar con prueba?",
-      "subheading": "Únete a los desarrolladores y empresas que confían en la verificación criptográfica sobre las plataformas de firma heredadas.",
+      "subheading": "Startups de toda LATAM están reemplazando papel y PDFs por correo con firmas verificables.",
       "createAccount": "Crear Cuenta Gratis",
-      "apiDocs": "Docs API"
+      "apiDocs": "Quickstart de la API"
     },
     "footer": {
+      "developers": "Desarrolladores",
+      "legal": "Validez legal",
+      "security": "Seguridad",
       "terms": "Términos",
       "privacy": "Privacidad",
       "status": "Estado"

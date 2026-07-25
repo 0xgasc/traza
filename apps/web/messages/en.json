@@ -1,69 +1,183 @@
 {
   "nav": {
     "signIn": "Sign In",
-    "startFree": "Start Free"
+    "startFree": "Start Free",
+    "developers": "Developers"
   },
   "landing": {
     "hero": {
-      "title": "Contracts, signed with proof.",
-      "subtitle": "A modern e-signature platform with cryptographic verification, audit-grade security, and pricing that makes sense.",
+      "title": "The signing & verification API for LATAM startups.",
+      "subtitle": "Embed legally solid e-signatures in your product in an afternoon — and give anyone cryptographic proof that a document is real. Built in Latin America, priced for it.",
       "startFree": "Start Free",
-      "viewApi": "View API",
-      "noCreditCard": "No credit card required. 5 free documents per month."
+      "quickstart": "Quickstart (5 min)",
+      "noCreditCard": "No credit card. 5 free documents per month.",
+      "codeCaptionSend": "send a document for signature",
+      "codeCaptionWebhook": "your webhook fires when it's signed"
+    },
+    "products": {
+      "heading": "Two products, one proof engine",
+      "sign": {
+        "kicker": "Traza Sign",
+        "title": "Embedded e-signature",
+        "desc": "Send, sign and complete documents from your own product or our dashboard. Signers don't need an account — they get a secure link and sign from any phone.",
+        "bullets": [
+          "REST API + webhooks with HMAC signatures",
+          "Templates, bulk send and team workspaces",
+          "OTP signer verification at signature",
+          "Audit trail with IP, timestamp and user agent"
+        ],
+        "cta": "Read the docs"
+      },
+      "verify": {
+        "kicker": "Traza Verify",
+        "title": "Document verification",
+        "desc": "Every document is hashed with SHA-256 on upload and optionally anchored to Polygon. Anyone can validate a document — no account needed, and the file never leaves their device.",
+        "bullets": [
+          "Public verification page per document",
+          "Verify any PDF by hash, computed client-side",
+          "Optional blockchain-anchored timestamps",
+          "Proof bundle: hashes, signers, audit events"
+        ],
+        "cta": "Verify a document"
+      }
     },
     "howItWorks": {
       "heading": "How it works",
-      "step1": { "num": "01", "title": "Upload", "desc": "Drop your PDF. We hash it with SHA-256 immediately." },
-      "step2": { "num": "02", "title": "Send", "desc": "Add signers. They get a secure link. No account needed." },
-      "step3": { "num": "03", "title": "Prove", "desc": "Download the signed doc with a cryptographic proof bundle." }
+      "step1": {
+        "num": "01",
+        "title": "Upload",
+        "desc": "Upload your PDF — from the dashboard or one API call. We hash it with SHA-256 instantly."
+      },
+      "step2": {
+        "num": "02",
+        "title": "Send",
+        "desc": "Add signers. They get a secure link. No account needed."
+      },
+      "step3": {
+        "num": "03",
+        "title": "Prove",
+        "desc": "Download the signed document with its cryptographic proof bundle — verifiable by anyone, forever."
+      }
+    },
+    "useCases": {
+      "heading": "Built for products that run on documents",
+      "subheading": "If your startup generates contracts, Traza is your signing layer.",
+      "fintech": {
+        "title": "Fintech & lending",
+        "desc": "Credit agreements and promissory notes signed inside your onboarding flow, with OTP-verified signers and a full evidence trail.",
+        "doc": "contratos de crédito · pagarés"
+      },
+      "proptech": {
+        "title": "Proptech & real estate",
+        "desc": "Leases signed from a phone. Combine with your payment stack to collect rent and deposit at signature.",
+        "doc": "arrendamientos · promesas de compraventa"
+      },
+      "hr": {
+        "title": "HR tech",
+        "desc": "Offer letters and employment contracts at scale, with templates and bulk send.",
+        "doc": "cartas de oferta · contratos laborales"
+      },
+      "marketplace": {
+        "title": "Marketplaces",
+        "desc": "Vendor onboarding with verifiable terms acceptance — proof that beats a checkbox.",
+        "doc": "onboarding de vendedores · términos"
+      }
     },
     "features": {
-      "heading": "Built different",
-      "cryptoProof": { "title": "Cryptographic Proof", "desc": "Every document is SHA-256 hashed at upload. Tamper-proof verification, instantly." },
-      "blockchain": { "title": "Blockchain Anchored", "desc": "Optional Polygon anchoring gives you immutable, timestamped proof on-chain." },
-      "apiFirst": { "title": "API-First", "desc": "Clean REST API with webhooks. Integrate signing into your product in minutes." },
-      "auditTrail": { "title": "Audit Trail", "desc": "Every view, sign, and download is logged with IP, timestamp, and user agent." },
-      "dx": { "title": "Developer Experience", "desc": "TypeScript SDK, OpenAPI docs, and webhook signatures. Built for developers." },
-      "pricing": { "title": "Transparent Pricing", "desc": "Free tier included. No per-envelope surprises. Scale when you need to." }
+      "heading": "Different by design",
+      "cryptoProof": {
+        "title": "Cryptographic Proof",
+        "desc": "Every document is hashed with SHA-256 on upload. Tamper-evident verification, instantly and forever."
+      },
+      "blockchain": {
+        "title": "Blockchain Anchored",
+        "desc": "Optional anchoring on Polygon for immutable, timestamped on-chain proof."
+      },
+      "apiFirst": {
+        "title": "API First",
+        "desc": "Clean REST API, HMAC-signed webhooks and a TypeScript SDK. Integrate signing into your product in minutes."
+      },
+      "auditTrail": {
+        "title": "Audit Trail",
+        "desc": "Every view, signature and download is logged with IP, timestamp and user agent."
+      },
+      "identity": {
+        "title": "Signer Verification",
+        "desc": "One-time codes at signature today; verified-identity tiers (ID + selfie) on the roadmap."
+      },
+      "legal": {
+        "title": "Legal Validity in LATAM",
+        "desc": "Evidence mapped to e-signature law in Guatemala, Mexico and Colombia — honestly documented, country by country."
+      },
+      "legalNote": "Wondering if this holds up in court?",
+      "legalLink": "Read the country-by-country legal guide"
     },
     "pricing": {
       "heading": "Simple pricing",
-      "subheading": "Start free. Upgrade when it matters.",
+      "subheading": "Free to start. Metered when you scale.",
       "free": {
         "name": "Free",
         "price": "$0",
         "period": "forever",
-        "features": ["5 documents / month", "Email signatures", "SHA-256 hashing", "Basic audit trail"],
+        "features": [
+          "5 documents / month",
+          "Email signing links",
+          "SHA-256 hashing + verify page",
+          "Basic audit trail"
+        ],
         "cta": "Start Free"
       },
       "starter": {
         "name": "Starter",
         "price": "$12",
         "period": "/ month",
-        "features": ["50 documents / month", "Custom branding", "API access", "Webhook notifications", "Priority support"],
+        "features": [
+          "50 documents / month",
+          "Custom branding",
+          "API access",
+          "Webhook notifications",
+          "Priority support"
+        ],
         "cta": "Get Started"
       },
       "pro": {
         "name": "Pro",
         "price": "$39",
         "period": "/ month",
-        "features": ["Unlimited documents", "Blockchain anchoring", "Team accounts", "Advanced audit logs", "Custom webhook events", "Bulk send"],
+        "features": [
+          "Unlimited dashboard documents",
+          "Blockchain anchoring",
+          "Team workspaces",
+          "Advanced audit trail",
+          "Bulk send"
+        ],
         "cta": "Go Pro"
       },
-      "enterprise": {
-        "name": "Enterprise",
-        "price": "Custom",
-        "features": ["Everything in Pro", "SSO / SAML", "Dedicated support", "Custom SLA", "On-prem option", "Compliance packages"],
-        "cta": "Contact Us"
-      }
+      "api": {
+        "name": "API",
+        "price": "$0.40",
+        "period": "/ completed envelope",
+        "features": [
+          "Unlimited free sandbox",
+          "Pay only for completed envelopes",
+          "OTP verification included",
+          "HMAC webhooks + TypeScript SDK",
+          "Volume discounts"
+        ],
+        "cta": "Get API Keys"
+      },
+      "enterpriseNote": "Enterprise? SSO/SAML, dedicated support, custom SLA and on-prem — contact us."
     },
     "cta": {
       "heading": "Ready to sign with proof?",
-      "subheading": "Join developers and businesses who trust cryptographic verification over legacy e-signature platforms.",
+      "subheading": "Startups across LATAM are replacing paper and PDFs-by-email with verifiable signatures.",
       "createAccount": "Create Free Account",
-      "apiDocs": "API Docs"
+      "apiDocs": "API Quickstart"
     },
     "footer": {
+      "developers": "Developers",
+      "legal": "Legal validity",
+      "security": "Security",
       "terms": "Terms",
       "privacy": "Privacy",
       "status": "Status"
