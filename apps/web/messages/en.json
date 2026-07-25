@@ -158,7 +158,7 @@
         "price": "$0.40",
         "period": "/ completed envelope",
         "features": [
-          "Unlimited free sandbox",
+          "Free tier for development",
           "Pay only for completed envelopes",
           "OTP verification included",
           "HMAC webhooks + TypeScript SDK",
