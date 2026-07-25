@@ -101,4 +101,15 @@ Uncommitted work exists (terms/privacy pages, CookieConsent, legal+cookieConsent
 - [ ] Smoke: hit prod /health, landing, /verify, /legalidad/guatemala
 - [ ] Update memory: project_traza.md (Sign/Verify positioning, new surfaces), note npm publish status
 
+## Amendments after plan review (2026-07-25)
+
+1. **Task 5:** verify-by-hash returns MINIMAL shape only: `{found, status, createdAt, completedAt, signerCount, anchored}` — never `documentId`, `title`, or signer names/emails (hash → id pivot would leak PII). Dedicated strict rate limiter (not generalLimiter).
+2. **Task 9:** there is NO existing server-side accessCode gate — enforcement must be an explicit check at the top of `submitSignature` in `signature.service.ts`: if `verificationLevel !== 'NONE' && otpVerifiedAt == null` → 403.
+3. **Task 9:** needs its own committed migration (`prisma migrate dev --name otp_verification`); prod only applies committed migration files.
+4. **Tasks 8/9:** must extend `sendForSigningSchema` (Zod strips unknown keys), `SignerInput`, AND the `prisma.signature.create` data — otherwise phone/channel/level silently dropped.
+5. **Task 8:** add `WHATSAPP_PROVIDER/WHATSAPP_ACCESS_TOKEN/WHATSAPP_PHONE_NUMBER_ID` as `.optional()` to `envSchema` in `config/env.ts`.
+6. **Task 3:** explicit `notFound()` for unknown countries (app is fully dynamic; generateStaticParams alone won't 404).
+7. **Task 7:** HMAC scheme is in `webhookDispatcher.ts`: `sha256=<hex hmac of raw body>`; SDK verify must use raw body bytes + timing-safe compare.
+8. Push only as one unit at the end (footer links 404 until Tasks 3/4/6 exist).
+
 **Explicitly deferred (not in this plan):** metered billing infra (pricing is presentation-only), Aval ID+selfie integration (documented as roadmap tier on landing/legal pages), Zapier/integrations, template gallery seeding, PSC/NOM-151 partnerships.
