@@ -956,5 +956,192 @@
     "loading": "Cargando...",
     "error": "Error",
     "success": "Éxito"
+  },
+  "legal": {
+    "privacy": {
+      "title": "Politica de Privacidad",
+      "lastUpdated": "Ultima actualizacion: 27 de mayo de 2026",
+      "intro": "Traza (\"nosotros\" o \"nuestro\"), operado por Offset Works, proporciona una plataforma de firma electronica con verificacion criptografica. Esta Politica de Privacidad explica como recopilamos, usamos y protegemos tu informacion cuando utilizas nuestros servicios en traza.dev.",
+      "dataCollected": {
+        "heading": "Datos que Recopilamos",
+        "account": {
+          "heading": "Informacion de Cuenta",
+          "desc": "Correo electronico, nombre completo y nombre de organizacion al registrarte o ser invitado a una organizacion."
+        },
+        "documents": {
+          "heading": "Documentos",
+          "desc": "Archivos de documentos (PDFs) que subes para firmar, incluidas plantillas de documentos. Los archivos se almacenan cifrados y se procesan para la colocacion de firmas."
+        },
+        "signatures": {
+          "heading": "Firmas Electronicas",
+          "desc": "Imagenes de firma (dibujadas o escritas), identidad del firmante (nombre, correo), marcas de tiempo de firma y hashes criptograficos (SHA-256) de los documentos firmados."
+        },
+        "audit": {
+          "heading": "Datos de Registro de Auditoria",
+          "desc": "Direcciones IP, cadenas de agente de usuario, marcas de tiempo para cada vista de documento, firma, descarga y evento del sistema. Estos datos son esenciales para la validez legal de las firmas electronicas."
+        }
+      },
+      "blockchain": {
+        "heading": "Anclaje en Blockchain",
+        "warning": "Los documentos firmados a traves de Traza pueden ser anclados a la blockchain de Arweave para verificacion a prueba de manipulacion. Una vez anclado, el hash del documento es permanente y no puede ser eliminado de la blockchain.",
+        "details": "Solo el hash criptografico (una huella digital matematica) del documento se ancla en la cadena, no el contenido del documento en si. El contenido real del documento permanece cifrado y bajo tu control. Sin embargo, la prueba criptografica de que un documento especifico existio y fue firmado en un momento determinado es permanente e inmutable."
+      },
+      "usage": {
+        "heading": "Como Usamos Tus Datos",
+        "item1": "Para proporcionar el servicio de firma electronica: subir, enviar, firmar y verificar documentos.",
+        "item2": "Para generar pruebas criptograficas y registros de auditoria que aseguren la validez legal de los documentos firmados.",
+        "item3": "Para enviar correos transaccionales: solicitudes de firma, recordatorios, notificaciones de finalizacion.",
+        "item4": "Para mantener la seguridad de la plataforma: proteccion CSRF, gestion de sesiones, prevencion de abuso.",
+        "item5": "Para proporcionar soporte al cliente y responder a tus consultas."
+      },
+      "thirdParties": {
+        "heading": "Servicios de Terceros",
+        "intro": "Utilizamos los siguientes servicios de terceros para operar Traza. Cada uno procesa solo los datos minimos necesarios para su funcion:",
+        "supabase": {
+          "name": "Supabase",
+          "purpose": "Autenticacion y gestion de sesiones de usuario."
+        },
+        "vercel": {
+          "name": "Vercel",
+          "purpose": "Alojamiento de la aplicacion web y entrega de contenido."
+        },
+        "railway": {
+          "name": "Railway",
+          "purpose": "Alojamiento del servidor API e infraestructura de base de datos."
+        },
+        "stash": {
+          "name": "Stash / Aeter",
+          "purpose": "Anclaje permanente de documentos a la blockchain de Arweave para verificacion a prueba de manipulacion."
+        }
+      },
+      "cookies": {
+        "heading": "Cookies",
+        "intro": "Traza utiliza unicamente cookies esenciales necesarias para el funcionamiento de la plataforma. No usamos cookies de publicidad, analiticas o rastreo.",
+        "session": {
+          "heading": "Cookie de Sesion de Autenticacion",
+          "desc": "Esencial. Mantiene tu sesion iniciada. Expira al cerrar sesion o despues del tiempo de espera de la sesion."
+        },
+        "csrf": {
+          "heading": "Token CSRF",
+          "desc": "Esencial. Protege contra ataques de falsificacion de solicitudes entre sitios. Se genera por sesion."
+        },
+        "consent": {
+          "heading": "Preferencia de Consentimiento de Cookies",
+          "desc": "Almacena tu eleccion de consentimiento de cookies en localStorage (no es una cookie). Persiste hasta que se borre."
+        },
+        "noTracking": "No usamos Google Analytics, Facebook Pixel ni ningun script de rastreo de terceros."
+      },
+      "retention": {
+        "heading": "Retencion de Datos",
+        "account": "Datos de cuenta: retenidos mientras tu cuenta este activa, mas 90 dias despues de la solicitud de eliminacion para permitir la recuperacion.",
+        "documents": "Registros de documentos firmados: retenidos segun lo requieran las leyes aplicables de firma electronica y comercio. Puedes solicitar la eliminacion de borradores no firmados en cualquier momento.",
+        "blockchain": "Anclas de blockchain Arweave: permanentes e inmutables por diseno. No pueden ser eliminadas.",
+        "audit": "Registros de auditoria: retenidos por el periodo legalmente requerido (minimo 5 anos para documentos firmados) para garantizar la ejecutabilidad de las firmas electronicas."
+      },
+      "rights": {
+        "heading": "Tus Derechos",
+        "access": "Acceso: solicitar una copia de todos los datos personales que tenemos sobre ti.",
+        "correction": "Correccion: solicitar la correccion de datos personales inexactos.",
+        "deletion": "Eliminacion: solicitar la eliminacion de tu cuenta y datos asociados, sujeto a los requisitos legales de retencion.",
+        "export": "Portabilidad de datos: exportar tus documentos y registros de firma.",
+        "note": "Para ejercer cualquiera de estos derechos, contactanos en privacy@offsetworks.xyz. Responderemos dentro de 30 dias. Ten en cuenta que la eliminacion de datos anclados en blockchain no es tecnicamente posible."
+      },
+      "noSales": {
+        "heading": "No Vendemos Datos",
+        "statement": "No vendemos, alquilamos ni intercambiamos tu informacion personal con terceros. No compartimos tus datos con fines publicitarios. Tus documentos son tuyos."
+      },
+      "age": {
+        "heading": "Requisito de Edad",
+        "desc": "Traza esta dirigido a usuarios mayores de 18 anos. No recopilamos datos de menores de 18 anos a sabiendas. Si crees que un menor ha creado una cuenta, contactanos de inmediato."
+      },
+      "changes": {
+        "heading": "Cambios a Esta Politica",
+        "desc": "Podemos actualizar esta Politica de Privacidad periodicamente. Te notificaremos de cambios materiales por correo electronico o mediante un aviso en nuestra plataforma. Tu uso continuado de Traza despues de que los cambios entren en vigor constituye la aceptacion de la politica actualizada."
+      },
+      "contact": {
+        "heading": "Contacto",
+        "desc": "Para preguntas o solicitudes relacionadas con privacidad, contactanos en:",
+        "email": "privacy@offsetworks.xyz"
+      },
+      "seeAlsoTerms": "Ver tambien: Terminos de Servicio"
+    },
+    "terms": {
+      "title": "Terminos de Servicio",
+      "lastUpdated": "Ultima actualizacion: 27 de mayo de 2026",
+      "acceptance": {
+        "heading": "1. Aceptacion de Terminos",
+        "desc": "Al acceder o usar Traza (el \"Servicio\"), operado por Offset Works, aceptas estar sujeto a estos Terminos de Servicio. Si no estas de acuerdo, no uses el Servicio. Estos terminos aplican a todos los usuarios, incluidos remitentes de documentos, firmantes y consumidores de la API."
+      },
+      "service": {
+        "heading": "2. Descripcion del Servicio",
+        "desc": "Traza es una plataforma de firma electronica que permite a los usuarios subir documentos, recopilar firmas electronicas legalmente vinculantes, generar pruebas criptograficas y, opcionalmente, anclar hashes de documentos a la blockchain de Arweave para verificacion permanente a prueba de manipulacion."
+      },
+      "esignatures": {
+        "heading": "3. Firmas Electronicas",
+        "validity": "Las firmas electronicas recopiladas a traves de Traza estan destinadas a ser legalmente vinculantes bajo las leyes aplicables de firma electronica, incluida la Ley ESIGN (EE.UU.), eIDAS (UE) y la ley de comercio electronico de Guatemala. Cada firma va acompanada de un hash criptografico, registro de auditoria y ancla de blockchain opcional.",
+        "consent": "Al usar Traza para firmar un documento, consientes en realizar la transaccion electronicamente y reconoces que tu firma electronica tiene el mismo peso legal que una firma manuscrita.",
+        "noGuarantee": "Traza proporciona la infraestructura tecnica para firmas electronicas pero no brinda asesoramiento legal. Es tu responsabilidad asegurarte de que las firmas electronicas sean apropiadas y legalmente validas para tu caso de uso y jurisdiccion especificos."
+      },
+      "accounts": {
+        "heading": "4. Terminos de Cuenta",
+        "age": "Debes tener al menos 18 anos para crear una cuenta.",
+        "accuracy": "Debes proporcionar informacion de registro precisa y completa.",
+        "security": "Eres responsable de mantener la seguridad de tus credenciales de cuenta y claves API.",
+        "oneAccount": "Una persona o entidad legal por cuenta. Las cuentas de organizacion pueden tener multiples miembros."
+      },
+      "retention": {
+        "heading": "5. Retencion de Documentos y Anclaje en Blockchain",
+        "obligation": "Eres responsable de mantener tus propias copias de documentos importantes. Aunque Traza almacena documentos de forma segura, recomendamos descargar los documentos firmados y los paquetes de prueba para tus registros.",
+        "blockchain": "Si decides anclar un documento a la blockchain de Arweave, el hash criptografico de ese documento se vuelve permanente e inmutable. Esta accion no puede revertirse. El contenido del documento en si no se almacena en la cadena, pero la prueba de su existencia y firma es permanente."
+      },
+      "acceptableUse": {
+        "heading": "6. Uso Aceptable",
+        "intro": "No puedes usar Traza para:",
+        "illegal": "Facilitar cualquier actividad ilegal o recopilar firmas en acuerdos ilicitos.",
+        "fraud": "Cometer fraude, suplantar a otros o falsificar firmas.",
+        "abuse": "Enviar solicitudes de firma no solicitadas o abusivas (spam).",
+        "malware": "Subir archivos maliciosos, virus o contenido danino.",
+        "reverseEngineer": "Intentar ingenieria inversa, descompilar o extraer el codigo fuente de la plataforma."
+      },
+      "ip": {
+        "heading": "7. Propiedad Intelectual",
+        "platform": "La plataforma Traza, incluido su software, diseno, marca y documentacion, es propiedad intelectual de Offset Works. Tu uso del Servicio no te otorga ningun derecho de propiedad sobre la plataforma.",
+        "content": "Conservas todos los derechos sobre los documentos y contenido que subes. Al subir documentos, otorgas a Traza una licencia limitada para procesarlos, almacenarlos y mostrarlos segun sea necesario para proporcionar el Servicio."
+      },
+      "api": {
+        "heading": "8. Uso de la API",
+        "desc": "El acceso a la API esta sujeto a limites de tasa y cuotas de uso segun tu nivel de plan. Las claves API son confidenciales y no deben compartirse ni exponerse en codigo del lado del cliente. Nos reservamos el derecho de limitar o suspender el acceso a la API por abuso o uso excesivo."
+      },
+      "liability": {
+        "heading": "9. Limitacion de Responsabilidad",
+        "disclaimer": "El servicio se proporciona \"tal cual\" y \"segun disponibilidad\" sin garantias de ningun tipo, ya sean expresas o implicitas.",
+        "limitation": "En la maxima medida permitida por la ley, Offset Works no sera responsable de ningun dano indirecto, incidental, especial, consecuente o punitivo, incluida la perdida de beneficios, datos u oportunidades comerciales, derivados de tu uso del Servicio.",
+        "indemnity": "Aceptas indemnizar y mantener indemne a Offset Works de cualquier reclamacion, dano o gasto derivado de tu uso del Servicio o violacion de estos Terminos."
+      },
+      "termination": {
+        "heading": "10. Terminacion",
+        "byYou": "Puedes cerrar tu cuenta en cualquier momento desde la configuracion de tu cuenta. Al cerrarla, tus datos se conservaran durante 90 dias antes de su eliminacion, sujeto a los requisitos legales de retencion para documentos firmados.",
+        "byUs": "Podemos suspender o terminar tu cuenta por violacion de estos Terminos, comportamiento abusivo o falta de pago. Proporcionaremos un aviso razonable cuando sea posible."
+      },
+      "law": {
+        "heading": "11. Ley Aplicable",
+        "desc": "Estos Terminos se rigen e interpretan de acuerdo con las leyes de la Republica de Guatemala. Cualquier disputa derivada de estos Terminos o del uso del Servicio se resolvera en los tribunales de la Ciudad de Guatemala, Guatemala."
+      },
+      "changes": {
+        "heading": "12. Cambios a Estos Terminos",
+        "desc": "Nos reservamos el derecho de modificar estos Terminos en cualquier momento. Los cambios materiales se comunicaran por correo electronico o notificacion en la plataforma con al menos 30 dias de anticipacion. El uso continuado del Servicio despues de que los cambios entren en vigor constituye aceptacion."
+      },
+      "contact": {
+        "heading": "Contacto",
+        "desc": "Para preguntas sobre estos Terminos, contactanos en:",
+        "email": "privacy@offsetworks.xyz"
+      },
+      "seeAlsoPrivacy": "Ver tambien: Politica de Privacidad"
+    }
+  },
+  "cookieConsent": {
+    "message": "Traza utiliza unicamente cookies esenciales para autenticacion y seguridad. No usamos cookies de rastreo ni publicidad.",
+    "learnMore": "Mas informacion",
+    "accept": "Entendido"
   }
 }

@@ -39,3 +39,4 @@ postgres_data/
 packages/crypto/cache/
 packages/crypto/artifacts/
 packages/crypto/typechain-types/
+*.tsbuildinfo

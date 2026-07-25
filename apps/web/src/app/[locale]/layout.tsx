@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { AuthProvider } from "@/lib/auth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { CookieConsent } from "@/components/CookieConsent";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -49,6 +50,7 @@ export default async function LocaleLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ErrorBoundary>
             <AuthProvider>{children}</AuthProvider>
+            <CookieConsent />
           </ErrorBoundary>
         </NextIntlClientProvider>
       </body>

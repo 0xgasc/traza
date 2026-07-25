@@ -956,5 +956,192 @@
     "loading": "Loading...",
     "error": "Error",
     "success": "Success"
+  },
+  "legal": {
+    "privacy": {
+      "title": "Privacy Policy",
+      "lastUpdated": "Last updated: May 27, 2026",
+      "intro": "Traza (\"we\", \"us\", or \"our\"), operated by Offset Works, provides an electronic signature platform with cryptographic verification. This Privacy Policy explains how we collect, use, and protect your information when you use our services at traza.dev.",
+      "dataCollected": {
+        "heading": "Data We Collect",
+        "account": {
+          "heading": "Account Information",
+          "desc": "Email address, full name, and organization name when you register or are invited to an organization."
+        },
+        "documents": {
+          "heading": "Documents",
+          "desc": "Document files (PDFs) you upload for signing, including document templates. Files are stored encrypted and processed for signature placement."
+        },
+        "signatures": {
+          "heading": "Electronic Signatures",
+          "desc": "Signature images (drawn or typed), signer identity (name, email), signing timestamps, and cryptographic hashes (SHA-256) of signed documents."
+        },
+        "audit": {
+          "heading": "Audit Trail Data",
+          "desc": "IP addresses, user agent strings, timestamps for every document view, signature, download, and system event. This data is essential for the legal validity of electronic signatures."
+        }
+      },
+      "blockchain": {
+        "heading": "Blockchain Anchoring",
+        "warning": "Documents signed through Traza may be anchored to the Arweave blockchain for tamper-proof verification. Once anchored, the document hash is permanent and cannot be removed from the blockchain.",
+        "details": "Only the cryptographic hash (a mathematical fingerprint) of the document is anchored on-chain, not the document content itself. The actual document content remains encrypted and under your control. However, the cryptographic proof that a specific document existed and was signed at a specific time is permanent and immutable."
+      },
+      "usage": {
+        "heading": "How We Use Your Data",
+        "item1": "To provide the e-signature service: uploading, sending, signing, and verifying documents.",
+        "item2": "To generate cryptographic proofs and audit trails that ensure the legal validity of signed documents.",
+        "item3": "To send transactional emails: signing requests, reminders, completion notifications.",
+        "item4": "To maintain platform security: CSRF protection, session management, abuse prevention.",
+        "item5": "To provide customer support and respond to your inquiries."
+      },
+      "thirdParties": {
+        "heading": "Third-Party Services",
+        "intro": "We use the following third-party services to operate Traza. Each processes only the minimum data necessary for its function:",
+        "supabase": {
+          "name": "Supabase",
+          "purpose": "Authentication and user session management."
+        },
+        "vercel": {
+          "name": "Vercel",
+          "purpose": "Web application hosting and content delivery."
+        },
+        "railway": {
+          "name": "Railway",
+          "purpose": "API server hosting and database infrastructure."
+        },
+        "stash": {
+          "name": "Stash / Aeter",
+          "purpose": "Permanent document anchoring to the Arweave blockchain for tamper-proof verification."
+        }
+      },
+      "cookies": {
+        "heading": "Cookies",
+        "intro": "Traza uses only essential cookies required for the platform to function. We do not use advertising, analytics, or tracking cookies.",
+        "session": {
+          "heading": "Authentication Session Cookie",
+          "desc": "Essential. Maintains your login session. Expires when you sign out or after session timeout."
+        },
+        "csrf": {
+          "heading": "CSRF Token",
+          "desc": "Essential. Protects against cross-site request forgery attacks. Generated per session."
+        },
+        "consent": {
+          "heading": "Cookie Consent Preference",
+          "desc": "Stores your cookie consent choice in localStorage (not a cookie). Persists until cleared."
+        },
+        "noTracking": "We do not use Google Analytics, Facebook Pixel, or any third-party tracking scripts."
+      },
+      "retention": {
+        "heading": "Data Retention",
+        "account": "Account data: retained while your account is active, plus 90 days after deletion request to allow recovery.",
+        "documents": "Signed document records: retained as required by applicable electronic signature and commercial laws. You may request deletion of unsigned drafts at any time.",
+        "blockchain": "Arweave blockchain anchors: permanent and immutable by design. These cannot be deleted.",
+        "audit": "Audit trail records: retained for the legally required period (minimum 5 years for signed documents) to ensure the enforceability of electronic signatures."
+      },
+      "rights": {
+        "heading": "Your Rights",
+        "access": "Access: request a copy of all personal data we hold about you.",
+        "correction": "Correction: request correction of inaccurate personal data.",
+        "deletion": "Deletion: request deletion of your account and associated data, subject to legal retention requirements.",
+        "export": "Data portability: export your documents and signature records.",
+        "note": "To exercise any of these rights, contact us at privacy@offsetworks.xyz. We will respond within 30 days. Note that deletion of blockchain-anchored data is not technically possible."
+      },
+      "noSales": {
+        "heading": "No Data Sales",
+        "statement": "We do not sell, rent, or trade your personal information to third parties. We do not share your data for advertising purposes. Your documents are yours."
+      },
+      "age": {
+        "heading": "Age Requirement",
+        "desc": "Traza is intended for users who are 18 years of age or older. We do not knowingly collect data from individuals under 18. If you believe a minor has created an account, please contact us immediately."
+      },
+      "changes": {
+        "heading": "Changes to This Policy",
+        "desc": "We may update this Privacy Policy from time to time. We will notify you of material changes by email or by posting a notice on our platform. Your continued use of Traza after changes take effect constitutes acceptance of the updated policy."
+      },
+      "contact": {
+        "heading": "Contact",
+        "desc": "For privacy-related questions or requests, contact us at:",
+        "email": "privacy@offsetworks.xyz"
+      },
+      "seeAlsoTerms": "See also: Terms of Service"
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "lastUpdated": "Last updated: May 27, 2026",
+      "acceptance": {
+        "heading": "1. Acceptance of Terms",
+        "desc": "By accessing or using Traza (the \"Service\"), operated by Offset Works, you agree to be bound by these Terms of Service. If you do not agree, do not use the Service. These terms apply to all users, including document senders, signers, and API consumers."
+      },
+      "service": {
+        "heading": "2. Service Description",
+        "desc": "Traza is an electronic signature platform that enables users to upload documents, collect legally binding electronic signatures, generate cryptographic proofs, and optionally anchor document hashes to the Arweave blockchain for permanent tamper-proof verification."
+      },
+      "esignatures": {
+        "heading": "3. Electronic Signatures",
+        "validity": "Electronic signatures collected through Traza are intended to be legally binding under applicable electronic signature laws, including the ESIGN Act (USA), eIDAS (EU), and Guatemalan electronic commerce law. Each signature is accompanied by a cryptographic hash, audit trail, and optional blockchain anchor.",
+        "consent": "By using Traza to sign a document, you consent to conducting the transaction electronically and acknowledge that your electronic signature carries the same legal weight as a handwritten signature.",
+        "noGuarantee": "Traza provides the technical infrastructure for electronic signatures but does not provide legal advice. It is your responsibility to ensure that electronic signatures are appropriate and legally valid for your specific use case and jurisdiction."
+      },
+      "accounts": {
+        "heading": "4. Account Terms",
+        "age": "You must be at least 18 years old to create an account.",
+        "accuracy": "You must provide accurate and complete registration information.",
+        "security": "You are responsible for maintaining the security of your account credentials and API keys.",
+        "oneAccount": "One person or legal entity per account. Organization accounts may have multiple members."
+      },
+      "retention": {
+        "heading": "5. Document Retention & Blockchain Anchoring",
+        "obligation": "You are responsible for maintaining your own copies of important documents. While Traza stores documents securely, we recommend downloading signed documents and proof bundles for your records.",
+        "blockchain": "If you elect to anchor a document to the Arweave blockchain, the cryptographic hash of that document becomes permanent and immutable. This action cannot be reversed. The document content itself is not stored on-chain, but the proof of its existence and signing is permanent."
+      },
+      "acceptableUse": {
+        "heading": "6. Acceptable Use",
+        "intro": "You may not use Traza to:",
+        "illegal": "Facilitate any illegal activity or collect signatures on unlawful agreements.",
+        "fraud": "Commit fraud, impersonate others, or forge signatures.",
+        "abuse": "Send unsolicited or abusive signing requests (spam).",
+        "malware": "Upload malicious files, viruses, or harmful content.",
+        "reverseEngineer": "Attempt to reverse-engineer, decompile, or extract the source code of the platform."
+      },
+      "ip": {
+        "heading": "7. Intellectual Property",
+        "platform": "The Traza platform, including its software, design, branding, and documentation, is the intellectual property of Offset Works. Your use of the Service does not grant you any ownership rights in the platform.",
+        "content": "You retain all rights to the documents and content you upload. By uploading documents, you grant Traza a limited license to process, store, and display them as necessary to provide the Service."
+      },
+      "api": {
+        "heading": "8. API Usage",
+        "desc": "API access is subject to rate limits and usage quotas based on your plan tier. API keys are confidential and must not be shared or exposed in client-side code. We reserve the right to throttle or suspend API access for abuse or excessive usage."
+      },
+      "liability": {
+        "heading": "9. Limitation of Liability",
+        "disclaimer": "The service is provided \"as is\" and \"as available\" without warranties of any kind, whether express or implied.",
+        "limitation": "To the maximum extent permitted by law, Offset Works shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or business opportunities, arising from your use of the Service.",
+        "indemnity": "You agree to indemnify and hold harmless Offset Works from any claims, damages, or expenses arising from your use of the Service or violation of these Terms."
+      },
+      "termination": {
+        "heading": "10. Termination",
+        "byYou": "You may close your account at any time from your account settings. Upon closure, your data will be retained for 90 days before deletion, subject to legal retention requirements for signed documents.",
+        "byUs": "We may suspend or terminate your account for violation of these Terms, abusive behavior, or non-payment. We will provide reasonable notice when possible."
+      },
+      "law": {
+        "heading": "11. Governing Law",
+        "desc": "These Terms are governed by and construed in accordance with the laws of the Republic of Guatemala. Any disputes arising from these Terms or the use of the Service shall be resolved in the courts of Guatemala City, Guatemala."
+      },
+      "changes": {
+        "heading": "12. Changes to These Terms",
+        "desc": "We reserve the right to modify these Terms at any time. Material changes will be communicated via email or platform notification at least 30 days in advance. Continued use of the Service after changes take effect constitutes acceptance."
+      },
+      "contact": {
+        "heading": "Contact",
+        "desc": "For questions about these Terms, contact us at:",
+        "email": "privacy@offsetworks.xyz"
+      },
+      "seeAlsoPrivacy": "See also: Privacy Policy"
+    }
+  },
+  "cookieConsent": {
+    "message": "Traza uses only essential cookies for authentication and security. We do not use tracking or advertising cookies.",
+    "learnMore": "Learn more",
+    "accept": "Got it"
   }
 }

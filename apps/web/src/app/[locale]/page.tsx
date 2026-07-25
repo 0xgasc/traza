@@ -189,12 +189,12 @@ export default function LandingPage() {
             traza
           </span>
           <div className="flex gap-6 text-sm text-stone-400">
-            <Link href="/api/docs" className="hover:text-white transition-colors">
+            <Link href="/terms" className="hover:text-white transition-colors">
               {t("footer.terms")}
             </Link>
-            <span className="hover:text-white transition-colors cursor-pointer">
+            <Link href="/privacy" className="hover:text-white transition-colors">
               {t("footer.privacy")}
-            </span>
+            </Link>
             <span className="hover:text-white transition-colors cursor-pointer">
               {t("footer.status")}
             </span>
